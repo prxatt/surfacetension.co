@@ -1,112 +1,4 @@
-// Enhanced mobile audio unlock for all platforms
-        async function unlockAudioContext() {
-            if (audioUnlockAttempts >= MAX_AUDIO_UNLOCK_ATTEMPTS) return false;
-            
-            try {
-                // Multi-platform audio unlock strategies
-                if (DEVICE_CAPABILITIES.isMobile || DEVICE_CAPABILITIES.isIOS) {
-                    // Strategy 1: AudioContext resume
-                    if (audioContext && audioContext.state === 'suspended') {
-                        await audioContext.resume();
-                    }
-                    
-                    // Strategy 2: Tone.js context resume
-                    if (Tone.context.state === 'suspended') {
-                        await Tone.context.resume();
-                    }
-                    
-                    // Strategy 3: Force audio output with boosted volume
-                    if (audioInitialized) {
-                        if (DEVICE_CAPABILITIES.isMobile) {
-                            Tone.Master.volume.value = 25; // Aggressive mobile volume
-                        }
-                        
-                        // Strategy 4: Test audio with Web Audio API
-                        try {
-                            const ctx = audioContext || Tone.context;
-                            const osc = ctx.createOscillator();
-                            const gain = ctx.createGain();
-                            osc.connect(gain);
-                            gain.connect(ctx.destination);
-                            gain.gain.value = 0.001;
-                            osc.frequency.value = 20;
-                            osc.start();
-                            osc.stop(ctx.currentTime + 0.001);
-                        } catch (e) {
-                            // Web Audio test failed, try Tone.js test
-                            try {
-                                const testOsc = new Tone.Oscillator(20, "sine").toDestination();
-                                testOsc.volume.value = -60;
-                                testOsc.start();
-                                testOsc.stop("+0.001");
-                            } catch (e2) {
-                                // Both tests failed
-                            }
-                        }
-                    }
-                }
-                return true;
-            } catch (error) {
-                console.warn('Audio unlock attempt failed:', error);
-                audioUnlockAttempts++;
-                return false;
-            }
-        }
-
-        // Enhanced mobile audio unlock for all platforms
-        async function unlockAudioContext() {
-            if (audioUnlockAttempts >= MAX_AUDIO_UNLOCK_ATTEMPTS) return false;
-            
-            try {
-                // Multi-platform audio unlock strategies
-                if (DEVICE_CAPABILITIES.isMobile || DEVICE_CAPABILITIES.isIOS) {
-                    // Strategy 1: AudioContext resume
-                    if (audioContext && audioContext.state === 'suspended') {
-                        await audioContext.resume();
-                    }
-                    
-                    // Strategy 2: Tone.js context resume
-                    if (Tone.context.state === 'suspended') {
-                        await Tone.context.resume();
-                    }
-                    
-                    // Strategy 3: Force audio output with boosted volume
-                    if (audioInitialized) {
-                        if (DEVICE_CAPABILITIES.isMobile) {
-                            Tone.Master.volume.value = 25; // Aggressive mobile volume
-                        }
-                        
-                        // Strategy 4: Test audio with Web Audio API
-                        try {
-                            const ctx = audioContext || Tone.context;
-                            const osc = ctx.createOscillator();
-                            const gain = ctx.createGain();
-                            osc.connect(gain);
-                            gain.connect(ctx.destination);
-                            gain.gain.value = 0.001;
-                            osc.frequency.value = 20;
-                            osc.start();
-                            osc.stop(ctx.currentTime + 0.001);
-                        } catch (e) {
-                            // Web Audio test failed, try Tone.js test
-                            try {
-                                const testOsc = new Tone.Oscillator(20, "sine").toDestination();
-                                testOsc.volume.value = -60;
-                                testOsc.start();
-                                testOsc.stop("+0.001");
-                            } catch (e2) {
-                                // Both tests failed
-                            }
-                        }
-                    }
-                }
-                return true;
-            } catch (error) {
-                console.warn('Audio unlock attempt failed:', error);
-                audioUnlockAttempts++;
-                return false;
-            }
-        }<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -662,7 +554,7 @@
         /* Enhanced responsive adjustments for better mobile text */
         @media (max-width: 768px) {
             #animated-text {
-                font-size: clamp(1.8rem, 8vw, 4rem);
+                font-size: clamp(2.4rem, 10vw, 5rem);
                 letter-spacing: 0.05em;
                 line-height: 1.1;
                 padding: 0 1rem;
@@ -718,7 +610,7 @@
         /* Better mobile text optimization */
         @media (max-width: 480px) {
             #animated-text {
-                font-size: clamp(1.6rem, 9vw, 3.5rem);
+                font-size: clamp(2rem, 11vw, 4rem);
                 margin: 0.3rem 0;
                 padding: 0 0.5rem;
             }
@@ -729,14 +621,6 @@
             }
             .event-date-text {
                 font-size: clamp(1rem, 5vw, 1.4rem);
-            }
-        }
-
-        /* Extra small screens */
-        @media (max-width: 360px) {
-            #animated-text {
-                font-size: clamp(1.4rem, 10vw, 3rem);
-                padding: 0 0.25rem;
             }
         }
 
@@ -858,12 +742,10 @@
         let particleScene, particleCamera, particleRenderer, particleComposer, backgroundVisual;
         let sextantCubeScene, sextantCubeCamera, sextantCubeRenderer, sextantCube;
         
-        // -- Enhanced iOS Audio Management --
+        // -- Simplified Mobile Audio Management --
         let audioInitialized = false;
         let audioContext = null;
         let droneSynth, arp, padSynth, disintegrateNoise, climaxChime, masterReverb, masterChorus, padFilter, cinematicLead;
-        let audioUnlockAttempts = 0;
-        const MAX_AUDIO_UNLOCK_ATTEMPTS = 8;
 
         let visualFeedback = { disperse: 0, glow: 0 };
 
@@ -1127,42 +1009,59 @@
             document.getElementById('start-overlay').classList.add('ready');
         }
         
-        // Enhanced iOS audio initialization
+        // Simplified and aggressive mobile audio initialization
         async function initAudio() {
             if (audioInitialized) return true;
 
             try {
-                // Aggressive iOS audio context management
+                // Immediate iOS audio context creation and unlock
                 if (DEVICE_CAPABILITIES.isIOS) {
                     if (!audioContext) {
                         audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     }
                     
+                    // Aggressive immediate resume for iOS
                     if (audioContext.state === 'suspended') {
                         await audioContext.resume();
+                        console.log('iOS Audio Context resumed');
                     }
                     
-                    // Force iOS audio activation
-                    if (DEVICE_CAPABILITIES.isSafari || DEVICE_CAPABILITIES.isChrome || DEVICE_CAPABILITIES.isArc) {
-                        const silentBuffer = audioContext.createBuffer(1, 1, 22050);
-                        const silentSource = audioContext.createBufferSource();
-                        silentSource.buffer = silentBuffer;
-                        silentSource.connect(audioContext.destination);
-                        silentSource.start();
-                    }
+                    // Force iOS audio activation with silent sound
+                    const silentBuffer = audioContext.createBuffer(1, 1, 22050);
+                    const silentSource = audioContext.createBufferSource();
+                    silentSource.buffer = silentBuffer;
+                    silentSource.connect(audioContext.destination);
+                    silentSource.start();
                 }
 
                 await Tone.start();
+                console.log('Tone.js started successfully');
                 
-                // iOS-specific volume optimization
-                const mobileVolumeBoost = DEVICE_CAPABILITIES.isMobile ? 20 : 0;
+                // Desktop audio stability - prevent context suspension
+                if (!DEVICE_CAPABILITIES.isMobile) {
+                    // Desktop-specific audio context monitoring
+                    const desktopAudioMonitor = setInterval(() => {
+                        if (Tone.context.state === 'suspended') {
+                            console.warn('Desktop audio context suspended, attempting resume...');
+                            Tone.context.resume().catch(e => console.warn('Desktop audio resume failed:', e));
+                        }
+                    }, 500);
+                    
+                    // Clear monitor after animation completes (20 seconds)
+                    setTimeout(() => clearInterval(desktopAudioMonitor), 20000);
+                }
                 
+                // Aggressive volume settings for mobile
                 if (DEVICE_CAPABILITIES.isIOS) {
-                    Tone.Master.volume.value = 20; // Aggressive iOS boost
+                    Tone.Master.volume.value = 25; // Ultra-aggressive iOS boost
+                    console.log('iOS audio volume set to maximum');
                 } else if (DEVICE_CAPABILITIES.isMobile) {
-                    Tone.Master.volume.value = 15;
+                    Tone.Master.volume.value = 20;
                 } else if (DEVICE_CAPABILITIES.isTablet) {
-                    Tone.Master.volume.value = 8;
+                    Tone.Master.volume.value = 10;
+                } else {
+                    // Desktop stability - moderate volume to prevent clipping
+                    Tone.Master.volume.value = 5;
                 }
 
                 masterReverb = new Tone.Reverb(4).toDestination();
@@ -1170,7 +1069,7 @@
                 masterChorus = new Tone.Chorus(2, 2.5, 0.7).connect(masterReverb);
 
                 droneSynth = new Tone.FMSynth({
-                    volume: -24 + mobileVolumeBoost,
+                    volume: DEVICE_CAPABILITIES.isMobile ? -4 : -24,
                     harmonicity: 0.5,
                     modulationIndex: 10,
                     envelope: { attack: 4, decay: 0.1, sustain: 1, release: 4 },
@@ -1179,7 +1078,7 @@
 
                 const arpFilter = new Tone.AutoFilter("8n").start();
                 const arpSynth = new Tone.MonoSynth({
-                    volume: -12 + mobileVolumeBoost,
+                    volume: DEVICE_CAPABILITIES.isMobile ? 8 : -12,
                     oscillator: { type: "sawtooth" },
                     filter: { Q: 2, type: "lowpass", rolloff: -24 },
                     envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.1 }
@@ -1191,20 +1090,20 @@
 
                 padFilter = new Tone.Filter(400, "lowpass").connect(masterChorus);
                 padSynth = new Tone.PolySynth(Tone.FMSynth, {
-                    volume: -18 + mobileVolumeBoost,
+                    volume: DEVICE_CAPABILITIES.isMobile ? 2 : -18,
                     harmonicity: 1.5,
                     modulationIndex: 5,
                     envelope: { attack: 3, decay: 0.5, sustain: 1, release: 5 }
                 }).connect(padFilter);
 
                 disintegrateNoise = new Tone.NoiseSynth({
-                    volume: -20 + mobileVolumeBoost,
+                    volume: DEVICE_CAPABILITIES.isMobile ? 0 : -20,
                     noise: { type: 'white' },
                     envelope: { attack: 0.01, decay: 1.5, sustain: 0 }
                 }).connect(masterReverb);
 
                 climaxChime = new Tone.MetalSynth({
-                    volume: -10 + mobileVolumeBoost,
+                    volume: DEVICE_CAPABILITIES.isMobile ? 10 : -10,
                     frequency: 300,
                     envelope: { attack: 0.001, decay: 1.4, release: 0.2 },
                     harmonicity: 5.1,
@@ -1231,7 +1130,7 @@
                 }).connect(cinematicChorus);
 
                 cinematicLead = new Tone.DuoSynth({
-                    volume: -20 + mobileVolumeBoost,
+                    volume: DEVICE_CAPABILITIES.isMobile ? 0 : -20,
                     vibratoAmount: 0.2,
                     vibratoRate: 4,
                     harmonicity: 1.5,
@@ -1272,50 +1171,11 @@
                 }).connect(cinematicFilter);
 
                 audioInitialized = true;
+                console.log('Audio initialization completed successfully');
                 return true;
                 
             } catch (error) {
                 console.error('Audio initialization failed:', error);
-                audioUnlockAttempts++;
-                return false;
-            }
-        }
-
-        // Multi-strategy iOS audio unlock
-        async function unlockAudioContext() {
-            if (audioUnlockAttempts >= MAX_AUDIO_UNLOCK_ATTEMPTS) return false;
-            
-            try {
-                if (DEVICE_CAPABILITIES.isIOS) {
-                    // Strategy 1: AudioContext resume
-                    if (audioContext && audioContext.state === 'suspended') {
-                        await audioContext.resume();
-                    }
-                    
-                    // Strategy 2: Tone.js context resume
-                    if (Tone.context.state === 'suspended') {
-                        await Tone.context.resume();
-                    }
-                    
-                    // Strategy 3: Force audio output
-                    if (audioInitialized) {
-                        Tone.Master.volume.value = 25; // Very aggressive for iOS
-                        
-                        // Strategy 4: Play silent sound
-                        try {
-                            const testOsc = new Tone.Oscillator(20, "sine").toDestination();
-                            testOsc.volume.value = -60;
-                            testOsc.start();
-                            testOsc.stop("+0.05");
-                        } catch (e) {
-                            // Silent fail
-                        }
-                    }
-                }
-                return true;
-            } catch (error) {
-                console.warn('Audio unlock attempt failed:', error);
-                audioUnlockAttempts++;
                 return false;
             }
         }
@@ -1327,7 +1187,20 @@
                 const canvasSize = 2048;
                 canvas.width = canvasSize;
                 canvas.height = canvasSize;
-                ctx.font = '200px "ivypresto-display"';
+                
+                // Responsive font size based on device capabilities
+                let fontSize = 200;
+                let scaleFactor = 0.08;
+                
+                if (DEVICE_CAPABILITIES.isMobile) {
+                    fontSize = 140; // Smaller font for mobile
+                    scaleFactor = 0.045; // Tighter scaling for mobile viewports
+                } else if (DEVICE_CAPABILITIES.isTablet) {
+                    fontSize = 160;
+                    scaleFactor = 0.055;
+                }
+                
+                ctx.font = `${fontSize}px "ivypresto-display"`;
                 ctx.fillStyle = '#fff';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
@@ -1339,8 +1212,8 @@
                     for (let x = 0; x < canvasSize; x += density) {
                         const alpha = imageData.data[(y * canvasSize + x) * 4 + 3];
                         if (alpha > 128) {
-                            const worldX = (x - canvasSize / 2) * 0.08;
-                            const worldY = -(y - canvasSize / 2) * 0.08;
+                            const worldX = (x - canvasSize / 2) * scaleFactor;
+                            const worldY = -(y - canvasSize / 2) * scaleFactor;
                             points.push(new THREE.Vector3(worldX, worldY, 0));
                         }
                     }
@@ -1553,17 +1426,32 @@
                 startOverlay.style.opacity = '0';
                 startOverlay.style.pointerEvents = 'none';
                 
-                // Mobile audio initialization with bulletproof strategies
+                // SIMPLIFIED MOBILE AUDIO - Direct initialization on user click
                 try {
                     const audioSuccess = await initAudio();
                     
-                    // Multiple mobile audio unlock attempts
-                    if (DEVICE_CAPABILITIES.isMobile) {
-                        // Immediate unlock attempts using dedicated function
-                        for (let i = 0; i < 5; i++) {
-                            setTimeout(async () => {
-                                await unlockAudioContext();
-                            }, i * 100);
+                    // Additional iOS-specific unlock IMMEDIATELY after user interaction
+                    if (DEVICE_CAPABILITIES.isIOS && audioSuccess) {
+                        // Force immediate unlock with multiple strategies
+                        if (audioContext && audioContext.state === 'suspended') {
+                            await audioContext.resume();
+                        }
+                        if (Tone.context.state === 'suspended') {
+                            await Tone.context.resume();
+                        }
+                        
+                        // Force volume and play test sound immediately
+                        Tone.Master.volume.value = 30;
+                        
+                        // Immediate test sound to force unlock
+                        try {
+                            const testOsc = new Tone.Oscillator(50, "sine").toDestination();
+                            testOsc.volume.value = -40;
+                            testOsc.start();
+                            testOsc.stop("+0.1");
+                            console.log('iOS audio test sound played');
+                        } catch (e) {
+                            console.warn('iOS test sound failed:', e);
                         }
                     }
                     
@@ -1577,121 +1465,12 @@
                 }
             }, { once: true });
 
-            // Comprehensive mobile audio unlock with multiple strategies
-            if (DEVICE_CAPABILITIES.isMobile || DEVICE_CAPABILITIES.isIOS) {
-                const mobileAudioEvents = ['touchstart', 'touchend', 'click', 'tap', 'pointerdown'];
-                
-                // Create persistent mobile audio unlock function
-                const mobileAudioUnlock = async () => {
-                    if (!audioInitialized) return;
-                    
-                    try {
-                        // Use dedicated unlock function
-                        await unlockAudioContext();
-                        
-                        // Additional mobile-specific unlock attempts
-                        if (Math.random() < 0.3) { // 30% chance to avoid spam
-                            try {
-                                const testOsc = new Tone.Oscillator(30, "sine").toDestination();
-                                testOsc.volume.value = -60;
-                                testOsc.start();
-                                testOsc.stop("+0.005");
-                            } catch (e) {
-                                // Silent fail
-                            }
-                        }
-                        
-                    } catch (error) {
-                        // Silent fail for mobile unlock attempts
-                    }
-                };
-                
-                // Attach to multiple mobile events
-                mobileAudioEvents.forEach(eventType => {
-                    document.addEventListener(eventType, mobileAudioUnlock, { passive: true });
-                });
-                
-                // Periodic mobile audio context check
-                const mobileAudioCheck = setInterval(() => {
-                    if (audioInitialized) {
-                        if (Tone.context.state === 'suspended') {
-                            Tone.context.resume().catch(() => {});
-                        }
-                        if (audioContext && audioContext.state === 'suspended') {
-                            audioContext.resume().catch(() => {});
-                        }
-                    }
-                }, 2000);
-                
-                // Clear interval after 60 seconds
-                setTimeout(() => clearInterval(mobileAudioCheck), 60000);
-                
-                // Additional mobile-specific strategies
-                if (DEVICE_CAPABILITIES.isIOS) {
-                    // iOS-specific unlock on orientation change
-                    window.addEventListener('orientationchange', mobileAudioUnlock, { passive: true });
-                    
-                    // iOS visibility change unlock
-                    document.addEventListener('visibilitychange', () => {
-                        if (!document.hidden) {
-                            setTimeout(mobileAudioUnlock, 100);
-                        }
-                    });
-                }
-                
-                // Mobile focus/blur unlock
-                window.addEventListener('focus', mobileAudioUnlock, { passive: true });
-                window.addEventListener('blur', mobileAudioUnlock, { passive: true });
-            }
-
             const muteButton = document.getElementById('mute-button');
             muteButton.addEventListener('click', () => {
                 if (!audioInitialized) return;
                 Tone.Master.mute = !Tone.Master.mute;
                 muteButton.className = Tone.Master.mute ? 'muted visible' : 'unmuted visible';
             });
-
-            // Mobile audio diagnostic and recovery
-            if (DEVICE_CAPABILITIES.isMobile) {
-                // Add mobile audio recovery on page focus
-                window.addEventListener('pageshow', async () => {
-                    if (audioInitialized) {
-                        setTimeout(async () => {
-                            try {
-                                if (Tone.context.state === 'suspended') {
-                                    await Tone.context.resume();
-                                }
-                                if (audioContext && audioContext.state === 'suspended') {
-                                    await audioContext.resume();
-                                }
-                                // Test with silent tone to verify unlock
-                                const testTone = new Tone.Oscillator(20, "sine").toDestination();
-                                testTone.volume.value = -60;
-                                testTone.start();
-                                testTone.stop("+0.001");
-                            } catch (e) {
-                                // Silent fail
-                            }
-                        }, 500);
-                    }
-                });
-                
-                // Mobile audio recovery on visibility change
-                document.addEventListener('visibilitychange', () => {
-                    if (!document.hidden && audioInitialized) {
-                        setTimeout(async () => {
-                            try {
-                                if (Tone.context.state === 'suspended') {
-                                    await Tone.context.resume();
-                                    Tone.Master.volume.value = Math.max(Tone.Master.volume.value, 25);
-                                }
-                            } catch (e) {
-                                // Silent fail
-                            }
-                        }, 100);
-                    }
-                });
-            }
 
             const passwordForm = document.getElementById('password-form');
             const passwordInput = document.getElementById('password-input');
@@ -1878,23 +1657,6 @@
 
         function handleTyping(e) {
             if (isTransitioning) return;
-            
-            // Mobile audio unlock during typing
-            if (DEVICE_CAPABILITIES.isMobile && audioInitialized) {
-                try {
-                    if (Tone.context.state === 'suspended') {
-                        Tone.context.resume().catch(() => {});
-                    }
-                    if (audioContext && audioContext.state === 'suspended') {
-                        audioContext.resume().catch(() => {});
-                    }
-                    // Boost volume on interaction
-                    Tone.Master.volume.value = Math.max(Tone.Master.volume.value, 25);
-                } catch (err) {
-                    // Silent fail
-                }
-            }
-            
             const currentInput = e.target.value.toUpperCase();
             let matchCount = 0;
             const target = "LIMINAL";
@@ -1916,23 +1678,6 @@
         
         function checkPassword(isAutoTrigger = false) {
             if (isTransitioning) return;
-            
-            // Mobile audio unlock during password submission
-            if (DEVICE_CAPABILITIES.isMobile && audioInitialized) {
-                try {
-                    if (Tone.context.state === 'suspended') {
-                        Tone.context.resume().catch(() => {});
-                    }
-                    if (audioContext && audioContext.state === 'suspended') {
-                        audioContext.resume().catch(() => {});
-                    }
-                    // Final volume boost attempt
-                    Tone.Master.volume.value = Math.max(Tone.Master.volume.value, 25);
-                } catch (err) {
-                    // Silent fail
-                }
-            }
-            
             const passwordInput = document.getElementById('password-input');
             const passwordForm = document.getElementById('password-form');
             const enteredPassword = passwordInput.value.toUpperCase().trim();
@@ -2000,26 +1745,40 @@
             const riddleOverlay = document.getElementById('riddle-overlay');
             const tl = gsap.timeline();
 
-        // RESTORE ORIGINAL TIMING AND AUDIO
-        function runOpeningSequence() {
-            const riddleOverlay = document.getElementById('riddle-overlay');
-            const tl = gsap.timeline();
-
             if (audioInitialized) {
+                // Desktop audio stability - prevent Transport interruption
+                if (!DEVICE_CAPABILITIES.isMobile) {
+                    // Add extra desktop audio protection during animation
+                    const protectAudio = setInterval(() => {
+                        if (Tone.Transport.state !== 'started' && audioInitialized) {
+                            console.warn('Desktop Transport stopped unexpectedly, restarting...');
+                            try {
+                                Tone.Transport.start();
+                            } catch (e) {
+                                console.warn('Transport restart failed:', e);
+                            }
+                        }
+                    }, 1000);
+                    
+                    // Clear protection after animation sequence
+                    setTimeout(() => clearInterval(protectAudio), 18000);
+                }
+
+                console.log('Starting audio sequence...');
                 Tone.Transport.bpm.value = 110; 
                 Tone.Transport.start();
 
                 droneSynth.triggerAttack("C1", Tone.now());
 
-                const audioStartTime = "2.0s"; // RESTORED ORIGINAL TIMING
+                const audioStartTime = "1.5s";
 
                 const chordProgression = [
                     { time: "0:0", note: "Cm", duration: "1m" },
                     { time: "1:0", note: "Gm", duration: "1m" },
                     { time: "2:0", note: "Fm", duration: "1m" },
                     { time: "3:0", note: "Cm", duration: "1m" },
-                    { time: "4:0", note: "Fm", duration: "2m" }, 
-                    { time: "6:0", note: "Cm", duration: "2m" }
+                    { time: "4:0", note: "Fm", duration: "1.5m" }, 
+                    { time: "5:2", note: "Cm", duration: "1.5m" }
                 ];
 
                 new Tone.Part((time, value) => {
@@ -2034,7 +1793,7 @@
 
                 arp.start(audioStartTime);
                 
-                // RESTORED ORIGINAL CINEMATIC TIMING
+                // Restored cinematic lead melody from original
                 const cinematicMelodySequence = new Tone.Sequence((time, note) => {
                     if (note) {
                         cinematicLead.triggerAttackRelease(note, '2n', time);
@@ -2055,64 +1814,16 @@
                     'Eb4', null, 'C4', null,
                     null, 'G4', 'F4', 'Eb4',
                     'D4', null, 'C4', null
-                ], '2n').start("8s"); // RESTORED ORIGINAL TIMING
+                ], '2n').start("6.5s");
 
                 cinematicMelodySequence.humanize = true;
                 cinematicMelodySequence.probability = 0.85;
 
                 padSynth.volume.rampTo(-18, 0.1, audioStartTime);
                 if (padFilter) {
-                    padFilter.frequency.rampTo(4000, 8, Tone.now() + 2.5); // RESTORED ORIGINAL
+                    padFilter.frequency.rampTo(4000, 7, Tone.now() + 2.0); 
                 }
             }
-
-            // ORIGINAL TIMING PRESERVED
-            tl.to(particles.material.uniforms.uExpansionProgress, {
-                value: 1.0,
-                duration: 6,
-                ease: 'power3.out'
-            }, "start");
-            
-            tl.to(particles.material.uniforms.uConvergenceProgress, {
-                value: 1.0,
-                duration: 8.5,
-                ease: 'power2.inOut',
-                onStart: () => {
-                    if (audioInitialized) {
-                         climaxChime.triggerAttack(Tone.now() + 0.1);
-                    }
-                }
-            }, "start+=4.0");
-
-            tl.to(particles.material.uniforms.uDisintegrationProgress, {
-                value: 1.0,
-                duration: 3.5, 
-                ease: 'power2.in',
-                onStart: () => {
-                    if (audioInitialized) {
-                        disintegrateNoise.triggerAttack(Tone.now() + 0.1);
-                    }
-                }
-            }, "start+=13.5");
-
-            tl.to(riddleOverlay, {
-                opacity: 1,
-                duration: 1.5,
-                ease: 'power2.out',
-                onStart: () => {
-                    if (riddleOverlay) riddleOverlay.classList.add('visible');
-                    if(audioInitialized) {
-                        const outroTime = Tone.Transport.now() + 40; // RESTORED ORIGINAL
-                        padSynth.volume.rampTo(-Infinity, 5, outroTime);
-                        cinematicLead.volume.rampTo(-Infinity, 6, outroTime);
-                        arp.stop(outroTime + 4);
-                        droneSynth.volume.rampTo(-Infinity, 8, outroTime + 1);
-                        
-                        Tone.Transport.stop(outroTime + 10);
-                    }
-                }
-            }, ">-1.0");
-        }
 
             // ORIGINAL TIMING PRESERVED
             tl.to(particles.material.uniforms.uExpansionProgress, {
