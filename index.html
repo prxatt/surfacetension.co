@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surface Tension</title>
+    <link rel="stylesheet" href="https://use.typekit.net/jhs3mli.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000000;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            transition: opacity 1.5s ease-in-out;
+        }
+        .canvas-container.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .overlay-container {
+            position: fixed;
+            z-index: 2;
+            color: white;
+            text-align: center;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            padding: 0 5vw;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1.5s ease-in-out;
+        }
+        .overlay-container.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        #start-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background-color: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 1s ease-in-out;
+            cursor: pointer;
+        }
+        #start-overlay.ready {
+            opacity: 1;
+            visibility: visible;
+        }
+        #start-prompt-container {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            background: rgba(10, 10, 10, 0.5);
+            backdrop-filter: blur(5px);
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.1);
+            animation: pulse-glow 3s infinite;
+        }
+        #start-prompt {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 25px rgba(255, 255, 255, 0.1); }
+            50% { box-shadow: 0 0 35px rgba(255, 255, 255, 0.2); }
+            100% { box-shadow: 0 0 25px rgba(255, 255, 255, 0.1); }
+        }
+
+
+        #mute-button {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 1001;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+        #mute-button.visible {
+            opacity: 0.5;
+            pointer-events: auto;
+        }
+        #mute-button:hover {
+            opacity: 1;
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.2);
+        }
+        #mute-button svg {
+            width: 20px;
+            height: 20px;
+            color: white;
+        }
+        #unmuted-icon, #muted-icon {
+            display: none;
+        }
+        #mute-button.unmuted #unmuted-icon { display: block; }
+        #mute-button.muted #muted-icon { display: block; }
+
+        #riddle-container {
+            width: 100%;
+            max-width: 650px; 
+            position: relative;
+            padding-bottom: 40px;
+        }
+        #riddle-text p {
+            font-family: "ivypresto-display", serif;
+            font-size: 1.1rem;
+            font-weight: 400;
+            line-height: 1.6;
+            margin: 0.2em auto;
+            color: rgba(255, 255, 255, 0.7);
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        #password-form {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            max-width: 350px;
+            margin: 2rem auto 0;
+            position: relative;
+        }
+        #password-form.error {
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        #password-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: white;
+            font-family: 'ivypresto-display', serif;
+            font-size: 1.1rem;
+            padding: 10px 15px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            width: 100%;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            transition: border-color 0.3s;
+        }
+        #password-input:focus {
+            border-color: rgba(255, 255, 255, 0.7);
+        }
+        #password-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+            font-family: 'Inter', sans-serif;
+            font-weight: 400;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            opacity: 0.5;
+        }
+        #submit-button { display: none; }
+        
+        #hint-container {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+        }
+        #hint-icon {
+            width: 30px;
+            height: 30px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: rgba(255,255,255,0.5);
+        }
+        #hint-icon:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            transform: scale(1.1);
+        }
+        #hint-tooltip {
+            position: absolute;
+            bottom: 40px;
+            right: 0;
+            width: 250px;
+            background: rgba(10, 10, 10, 0.9);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            text-align: left;
+            color: rgba(255,255,255,0.8);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        #hint-tooltip.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        #animated-text-container {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 90%;
+            max-width: 1000px;
+            padding-bottom: 80px; /* Space for footer */
+        }
+        #event-date-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%; 
+            margin-bottom: 0.5rem; 
+        }
+        .event-date-text {
+            font-family: "ivypresto-display", serif;
+            font-size: clamp(1.2rem, 2vw, 1.5rem);
+            color: rgba(255, 255, 255, 0.8);
+            text-transform: uppercase;
+        }
+        .event-date-text a {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.3s, text-shadow 0.3s;
+        }
+        .event-date-text a:hover {
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        #animated-text {
+            font-family: "ivypresto-display", serif;
+            font-weight: 400;
+            font-style: normal;
+            font-size: clamp(2.5rem, 8vw, 6rem);
+            line-height: 1.2;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: white;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.2), 0 0 30px rgba(255, 255, 255, 0.1);
+            width: 100%; 
+        }
+        #subtext {
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            font-size: clamp(1rem, 1.8vw, 1.3rem);
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 0.75rem; 
+            opacity: 0;
+            animation: fadeIn 1s ease 1s forwards;
+        }
+        @keyframes fadeIn { to { opacity: 1; } }
+        #flicker-text {
+            color: #10b981;
+        }
+        
+        .subheading-rave {
+            color: #a855f7;
+        }
+        
+        #ticket-particle-button {
+            margin-top: 3rem;
+            position: relative;
+            width: 250px;
+            height: 80px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background-color 0.3s;
+        }
+        #ticket-particle-button:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        #ticket-particle-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #access-code-wrapper {
+            margin-top: 1.5rem;
+            font-family: 'Inter', sans-serif;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.8rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+        #access-code-text {
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        #access-code-text:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+        #copy-notification {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #10b981;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.5s, transform 0.5s;
+            pointer-events: none;
+        }
+        #copy-notification.show {
+            opacity: 1;
+            transform: translate(-50%, -10px);
+        }
+
+        #social-links-container {
+            position: fixed;
+            bottom: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1.75rem;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0; /* Initially hidden */
+            pointer-events: none; /* Initially disabled */
+            transition: opacity 1.5s ease-in-out;
+        }
+        #social-links-container.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #social-links-container a {
+            color: rgba(255, 255, 255, 0.5);
+            transition: color 0.3s ease, transform 0.3s ease;
+        }
+        #social-links-container a:hover {
+            color: #fff;
+            transform: translateY(-2px);
+        }
+        #social-links-container svg {
+            width: 22px;
+            height: 22px;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-height: 500px) {
+            #animated-text-container {
+                padding-bottom: 60px; /* Less padding on short screens */
+            }
+            #social-links-container {
+                bottom: 1rem;
+            }
+        }
+
+    </style>
+    <!-- Library Loading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FontLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/TextGeometry.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/MeshSurfaceSampler.js"></script>
+</head>
+<body>
+    <div id="start-overlay">
+        <div id="start-prompt-container">
+            <div id="start-prompt">Initialize Sequence</div>
+        </div>
+    </div>
+
+    <button id="mute-button" class="unmuted">
+        <svg id="unmuted-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /></svg>
+        <svg id="muted-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /></svg>
+    </button>
+
+    <div id="liminal-canvas-container" class="canvas-container">
+        <canvas id="liminal-canvas"></canvas>
+    </div>
+    
+    <div id="particle-canvas-container" class="canvas-container hidden">
+        <canvas id="particle-canvas"></canvas>
+    </div>
+    
+    <div id="riddle-overlay" class="overlay-container">
+        <div id="riddle-container">
+            <div id="riddle-text">
+                <p>I am the space between one world and the next,</p>
+                <p>a threshold of change where realities connect.</p>
+                <p>What am I?</p>
+            </div>
+            <form id="password-form">
+                <input type="password" id="password-input" placeholder="What am I?">
+                <button type="submit" id="submit-button">&rarr;</button>
+            </form>
+            <div id="hint-container">
+                <div id="hint-tooltip">The answer lies at the threshold of perception. Seek it in the digital ether, or ask a guide at the physical nexus.</div>
+                <div id="hint-icon">?</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="animated-text-container" class="overlay-container">
+        <div id="event-date-container">
+            <span class="event-date-text" id="event-date-left"></span>
+            <span class="event-date-text" id="event-date-right"></span>
+        </div>
+        <h1 id="animated-text"></h1>
+        <p id="subtext"><span id="flicker-text">Digital Drip</span> : <span class="subheading-rave">An After-Hours Art Rave</span></p>
+        
+        <a id="ticket-particle-button" href="https://www.eventbrite.com/e/surface-tension-digital-drip-an-after-hours-art-rave-tickets-1471279469499?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl" target="_blank" rel="noopener noreferrer" aria-label="Purchase Tickets">
+            <canvas id="ticket-particle-canvas"></canvas>
+        </a>
+
+        <div id="access-code-wrapper">
+            ACCESS CODE: <span id="access-code-text" onclick="copyCode(event)">TENSIONPOINT</span>
+        </div>
+    </div>
+
+    <div id="social-links-container">
+        <a href="https://www.instagram.com/surfacetension.co" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.85s-.011 3.584-.069 4.85c-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07s-3.584-.012-4.85-.07c-3.252-.148-4.771-1.691-4.919-4.919-.058-1.265-.07-1.645-.07-4.85s.012-3.584.07-4.85c.148-3.225 1.664-4.771 4.919-4.919C8.416 2.175 8.796 2.163 12 2.163zm0 1.802c-3.143 0-3.505.012-4.73.068-2.693.123-3.995 1.424-4.118 4.118-.056 1.225-.068 1.586-.068 4.73s.012 3.505.068 4.73c.123 2.693 1.424 3.995 4.118 4.118 1.225.056 1.586.068 4.73.068s3.505-.012 4.73-.068c2.693-.123 3.995-1.424 4.118-4.118.056-1.225.068-1.586.068-4.73s-.012-3.505-.068-4.73c-.123-2.693-1.424-3.995-4.118-4.118-1.225-.056-1.586-.068-4.73-.068zm0 3.888c-2.402 0-4.35 1.948-4.35 4.35s1.948 4.35 4.35 4.35 4.35-1.948 4.35-4.35-1.948-4.35-4.35-4.35zm0 7.167c-1.553 0-2.817-1.264-2.817-2.817s1.264-2.817 2.817-2.817 2.817 1.264 2.817 2.817-1.264 2.817-2.817 2.817zm4.965-7.332c-.608 0-1.1.492-1.1 1.1s.492 1.1 1.1 1.1 1.1-.492 1.1-1.1-.492-1.1-1.1-1.1z"></path></svg>
+        </a>
+        <a href="https://www.twitter.com/surfacetensi_n" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
+        </a>
+        <a href="https://www.tiktok.com/@surfacetension.co" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-2.43.05-4.84-.95-6.43-2.8-1.59-1.87-2.16-4.2-1.8-6.51.41-2.5 2.5-4.61 4.82-5.59.98-.4 2.02-.63 3.04-.77.02-2.88-.01-5.76.01-8.63.01-1.49.52-2.96 1.4-4.16.83-1.11 2.02-1.86 3.31-2.2z"></path></svg>
+        </a>
+        <a href="https://www.facebook.com/profile.php?id=61577915426183" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M14 13.5h2.5l1-4H14v-2c0-1.03 0-2 2-2h1.5V2.14c-.326-.043-1.557-.14-2.857-.14C11.928 2 10 3.657 10 6.7v2.8H7v4h3v9h4z"></path></svg>
+        </a>
+    </div>
+
+    <div id="copy-notification">Copied!</div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // -- Configuration --
+        const TITLE_TEXT = "SURFACE TENSION";
+        const CORRECT_PASSWORDS = ['LIMINAL', 'LIMINAL SPACE'];
+
+        // -- Global State --
+        const clock = new THREE.Clock();
+        let activeScene = 'title';
+        let isTransitioning = false;
+        
+        // -- Scene Variables --
+        let scene, camera, renderer, particles, composer, bloomPass;
+        let particleScene, particleCamera, particleRenderer, particleComposer, backgroundVisual;
+        let ticketParticleScene, ticketParticleCamera, ticketParticleRenderer, ticketParticles;
+        
+        // -- Audio variables
+        let audioInitialized = false;
+        let droneSynth, arp, padSynth, disintegrateNoise, climaxChime, masterReverb, masterChorus, padFilter, counterMelody;
+
+        let visualFeedback = { disperse: 0, glow: 0 };
+
+        // -- Bypass State --
+        const keysPressed = new Set();
+        let tapCount = 0;
+        let tapTimer = null;
+
+        // -- OPTIMIZATION: Debounce function for resize handler
+        function debounce(func, wait, immediate) {
+            let timeout;
+            return function() {
+                const context = this, args = arguments;
+                const later = function() {
+                    timeout = null;
+                    if (!immediate) func.apply(context, args);
+                };
+                const callNow = immediate && !timeout;
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+                if (callNow) func.apply(context, args);
+            };
+        };
+
+        // -- OPTIMIZATION: Dynamically adjust particle count based on device performance
+        function getDynamicParticleCount() {
+            const width = window.innerWidth;
+            const dpr = window.devicePixelRatio;
+
+            if (width < 768 || dpr < 1.5) {
+                return 50000; // Mobile devices
+            } else if (width < 1200) {
+                return 100000; // Tablets and small laptops
+            }
+            return 200000; // High-end desktops
+        }
+        const PARTICLE_COUNT = getDynamicParticleCount();
+        const FIELD_RADIUS = 100;
+
+        /*
+         * ==================================
+         * == SHADER CODE (GLSL)           ==
+         * ==================================
+         */
+        const particleVertexShader = `
+            uniform float uTime;
+            uniform float uExpansionProgress;
+            uniform float uConvergenceProgress;
+            uniform float uDisintegrationProgress;
+            uniform float uFieldRadius;
+            uniform float uDisperse;
+
+            attribute float aSize;
+            attribute vec3 aColor;
+            attribute vec3 aTargetPosition;
+            attribute float aRandomness;
+            attribute float aIsTextParticle;
+            attribute vec3 aTextTargetPosition;
+
+            varying vec3 vColor;
+            varying float vAlpha;
+
+            vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+            vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+            float snoise(vec3 v) {
+                const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+                const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+                vec3 i  = floor(v + dot(v, C.yyy));
+                vec3 x0 = v - i + dot(i, C.xxx);
+                vec3 g = step(x0.yzx, x0.xyz);
+                vec3 l = 1.0 - g;
+                vec3 i1 = min(g.xyz, l.zxy);
+                vec3 i2 = max(g.xyz, l.zxy);
+                vec3 x1 = x0 - i1 + C.xxx;
+                vec3 x2 = x0 - i2 + C.yyy;
+                vec3 x3 = x0 - D.yyy;
+                i = mod289(i);
+                vec4 p = permute(permute(permute(
+                            i.z + vec4(0.0, i1.z, i2.z, 1.0))
+                        + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+                        + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+                float n_ = 0.142857142857;
+                vec3 ns = n_ * D.wyz - D.xzx;
+                vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+                vec4 x_ = floor(j * ns.z);
+                vec4 y_ = floor(j - 7.0 * x_);
+                vec4 x = x_ * ns.x + ns.yyyy;
+                vec4 y = y_ * ns.x + ns.yyyy;
+                vec4 h = 1.0 - abs(x) - abs(y);
+                vec4 b0 = vec4(x.xy, y.xy);
+                vec4 b1 = vec4(x.zw, y.zw);
+                vec4 s0 = floor(b0)*2.0 + 1.0;
+                vec4 s1 = floor(b1)*2.0 + 1.0;
+                vec4 sh = -step(h, vec4(0.0));
+                vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+                vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+                vec3 p0 = vec3(a0.xy,h.x);
+                vec3 p1 = vec3(a0.zw,h.y);
+                vec3 p2 = vec3(a1.xy,h.z);
+                vec3 p3 = vec3(a1.zw,h.w);
+                vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+                p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+                vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+                m = m * m;
+                return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+            }
+            
+            void main() {
+                vec3 chaoticPos = aTargetPosition;
+                float noiseFactor = snoise(vec3(chaoticPos.xy * 0.05, uTime * 0.1 + aRandomness * 5.0));
+                chaoticPos.z += noiseFactor * 2.0;
+                chaoticPos.x += snoise(vec3(chaoticPos.yz * 0.05, uTime * 0.1)) * 0.5;
+                chaoticPos.y += snoise(vec3(chaoticPos.xz * 0.05, uTime * 0.1)) * 0.5;
+                float speed = uTime * 2.0;
+                vec3 drift = vec3(0.0);
+                if (length(aTargetPosition) > 0.0) {
+                    drift = normalize(aTargetPosition) * speed;
+                }
+                float fieldDiameter = uFieldRadius * 2.0;
+                chaoticPos = mod(chaoticPos + drift + uFieldRadius, fieldDiameter) - uFieldRadius;
+                vec3 pos = mix(vec3(0.0), chaoticPos, uExpansionProgress);
+                
+                float convergenceFactor = smoothstep(0.0, 1.0, uConvergenceProgress);
+                float disintegrationFactor = smoothstep(0.0, 1.0, uDisintegrationProgress);
+
+                if (aIsTextParticle > 0.5) {
+                    vec3 convergedPos = mix(pos, aTextTargetPosition, convergenceFactor);
+                    pos = mix(convergedPos, chaoticPos, disintegrationFactor);
+                }
+                
+                pos.x += snoise(vec3(pos.y * 0.5, uTime * 2.0, aRandomness)) * uDisperse;
+                pos.y += snoise(vec3(pos.z * 0.5, uTime * 2.0, aRandomness)) * uDisperse;
+                
+                vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+                gl_PointSize = aSize * (200.0 / -mvPosition.z);
+                float depth = -mvPosition.z;
+                vAlpha = smoothstep(uFieldRadius * 1.5, uFieldRadius * 0.5, depth); 
+                vAlpha *= uExpansionProgress;
+                
+                if (aIsTextParticle > 0.5) {
+                    float textVisibility = convergenceFactor * (1.0 - disintegrationFactor);
+                    vAlpha = mix(vAlpha, 0.9, textVisibility);
+                    vColor = mix(aColor, vec3(1.5, 1.5, 1.5), textVisibility);
+                } else {
+                    vColor = aColor;
+                }
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `;
+
+        const particleFragmentShader = `
+            varying vec3 vColor;
+            varying float vAlpha;
+            void main() {
+                float dist = distance(gl_PointCoord, vec2(0.5));
+                float strength = 1.0 - dist * 2.0;
+                if (strength < 0.0) discard;
+                gl_FragColor = vec4(vColor, strength * vAlpha);
+            }
+        `;
+
+        const backgroundVertexShader = `
+            uniform float uTime;
+            attribute float aParticleType; 
+            varying float vAlpha; 
+            varying float vParticleType;
+            varying vec3 vColor;
+
+            void main() {
+                vParticleType = aParticleType; 
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                
+                float rippleTime = uTime * 0.15;
+                float dist = length(position.xy);
+                float ripple = sin(dist * 1.2 - rippleTime) * 1.5 * exp(-dist * 0.1);
+                mvPosition.z += ripple;
+
+                float flash = smoothstep(0.9, 1.0, sin(dist * 1.2 - rippleTime + 1.57));
+                vec3 flashColor = vec3(0.06, 0.71, 0.51); // Emerald
+                vec3 baseColor = mix(vec3(1.0, 1.0, 1.0), vec3(0.6, 0.65, 0.75), aParticleType);
+                vColor = mix(baseColor, flashColor, flash);
+                
+                float zFactor = 1.0 - clamp(abs(mvPosition.z / 20.0), 0.0, 1.0);
+                float pSize = (zFactor * zFactor) * 2.0 + 0.5;
+                gl_PointSize = pSize; 
+                vAlpha = zFactor;
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `;
+
+        const backgroundFragmentShader = `
+            varying float vAlpha; 
+            varying vec3 vColor;
+            void main() {
+                float dist = distance(gl_PointCoord, vec2(0.5)); 
+                if (dist > 0.5) discard;
+                float strength = 1.0 - dist * 2.0;
+                gl_FragColor = vec4(vColor, strength * vAlpha);
+            }
+        `;
+        
+        const ticketParticleVertexShader = `
+            uniform float uTime;
+            uniform float uHoverState; // 0 = swirling, 1 = text
+            
+            attribute vec3 aTextPosition;
+            attribute float aRandomness;
+
+            varying vec3 vColor;
+
+            vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+            vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+            float snoise(vec3 v) {
+                const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+                const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+                vec3 i  = floor(v + dot(v, C.yyy));
+                vec3 x0 = v - i + dot(i, C.xxx);
+                vec3 g = step(x0.yzx, x0.xyz);
+                vec3 l = 1.0 - g;
+                vec3 i1 = min(g.xyz, l.zxy);
+                vec3 i2 = max(g.xyz, l.zxy);
+                vec3 x1 = x0 - i1 + C.xxx;
+                vec3 x2 = x0 - i2 + C.yyy;
+                vec3 x3 = x0 - D.yyy;
+                i = mod289(i);
+                vec4 p = permute(permute(permute(
+                            i.z + vec4(0.0, i1.z, i2.z, 1.0))
+                        + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+                        + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+                float n_ = 0.142857142857;
+                vec3 ns = n_ * D.wyz - D.xzx;
+                vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+                vec4 x_ = floor(j * ns.z);
+                vec4 y_ = floor(j - 7.0 * x_);
+                vec4 x = x_ * ns.x + ns.yyyy;
+                vec4 y = y_ * ns.x + ns.yyyy;
+                vec4 h = 1.0 - abs(x) - abs(y);
+                vec4 b0 = vec4(x.xy, y.xy);
+                vec4 b1 = vec4(x.zw, y.zw);
+                vec4 s0 = floor(b0)*2.0 + 1.0;
+                vec4 s1 = floor(b1)*2.0 + 1.0;
+                vec4 sh = -step(h, vec4(0.0));
+                vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+                vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+                vec3 p0 = vec3(a0.xy,h.x);
+                vec3 p1 = vec3(a0.zw,h.y);
+                vec3 p2 = vec3(a1.xy,h.z);
+                vec3 p3 = vec3(a1.zw,h.w);
+                vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+                p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+                vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+                m = m * m;
+                return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+            }
+
+            void main() {
+                // Swirling vortex state
+                float angle = aRandomness * 3.14159 * 2.0 + uTime * 0.5;
+                float radius = 0.5 + aRandomness * 0.8;
+                vec3 swirlPos = vec3(cos(angle) * radius, sin(angle) * radius, snoise(vec3(position.xy, uTime * 0.2)) * 0.2);
+                
+                // Mix between swirl and text
+                float progress = smoothstep(0.0, 1.0, uHoverState);
+                vec3 pos = mix(swirlPos, aTextPosition, progress);
+
+                // Add some jitter
+                pos.x += snoise(vec3(pos.yz * 2.0, uTime)) * 0.01 * (1.0 - progress);
+                pos.y += snoise(vec3(pos.xz * 2.0, uTime)) * 0.01 * (1.0 - progress);
+
+                vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+                
+                // Color based on hover state and randomness
+                vec3 color1 = vec3(0.66, 0.33, 0.98); // Purple
+                vec3 color2 = vec3(0.06, 0.73, 0.51); // Green
+                vec3 color3 = vec3(1.0, 1.0, 1.0);    // White
+                vec3 finalColor = mix(color1, color2, aRandomness);
+                vColor = mix(finalColor, color3, progress);
+
+                gl_PointSize = (1.0 - progress) * 1.5 + progress * 1.2;
+                gl_PointSize *= ( 60.0 / -mvPosition.z );
+
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `;
+
+        const ticketParticleFragmentShader = `
+            varying vec3 vColor;
+            void main() {
+                float dist = distance(gl_PointCoord, vec2(0.5));
+                float strength = 1.0 - dist * 2.0;
+                if (strength < 0.0) discard;
+                gl_FragColor = vec4(vColor, strength * 0.8);
+            }
+        `;
+
+        async function init() {
+            // Visuals first
+            initScene(); 
+            initParticleScene();
+            await initTicketButton(); 
+            await createParticles();
+            setupEventListeners();
+            animate();
+            document.getElementById('start-overlay').classList.add('ready');
+        }
+        
+        function initAudio() {
+            if (audioInitialized) return;
+
+            masterReverb = new Tone.Reverb(4).toDestination();
+            masterReverb.wet.value = 0.6;
+            masterChorus = new Tone.Chorus(2, 2.5, 0.7).connect(masterReverb);
+
+            droneSynth = new Tone.FMSynth({
+                volume: -24,
+                harmonicity: 0.5,
+                modulationIndex: 10,
+                envelope: { attack: 4, decay: 0.1, sustain: 1, release: 4 },
+                modulationEnvelope: { attack: 4, decay: 0.1, sustain: 1, release: 4 }
+            }).connect(masterChorus);
+
+            const arpFilter = new Tone.AutoFilter("8n").start();
+            const arpSynth = new Tone.MonoSynth({
+                volume: -12,
+                oscillator: { type: "sawtooth" },
+                filter: { Q: 2, type: "lowpass", rolloff: -24 },
+                envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.1 }
+            }).connect(arpFilter).connect(masterChorus);
+            arp = new Tone.Pattern((time, note) => {
+                arpSynth.triggerAttackRelease(note, "16n", time);
+            }, ["C2", "Eb2", "G2", "Bb2"], "up");
+            arp.interval = "16n";
+
+            padFilter = new Tone.Filter(400, "lowpass").connect(masterChorus);
+            padSynth = new Tone.PolySynth(Tone.FMSynth, {
+                volume: -18,
+                harmonicity: 1.5,
+                modulationIndex: 5,
+                envelope: { attack: 3, decay: 0.5, sustain: 1, release: 5 }
+            }).connect(padFilter);
+
+            disintegrateNoise = new Tone.NoiseSynth({
+                volume: -20,
+                noise: { type: 'white' },
+                envelope: { attack: 0.01, decay: 1.5, sustain: 0 }
+            }).connect(masterReverb);
+
+            climaxChime = new Tone.MetalSynth({
+                volume: -10,
+                frequency: 300,
+                envelope: { attack: 0.001, decay: 1.4, release: 0.2 },
+                harmonicity: 5.1,
+                modulationIndex: 32,
+                resonance: 4000,
+                octaves: 1.5
+            }).connect(masterReverb);
+
+            // MODIFIED: Refined counter-melody synth for subtlety
+            const counterMelodyDelay = new Tone.FeedbackDelay("4n", 0.6).connect(masterChorus);
+            counterMelody = new Tone.DuoSynth({
+                volume: -26, // Lowered volume for subtlety
+                vibratoAmount: 0.1,
+                vibratoRate: 2,
+                harmonicity: 1,
+                voice0: {
+                    oscillator: { type: 'sine' },
+                    envelope: { attack: 1.5, decay: 0.1, sustain: 1, release: 2 } // Slower attack
+                },
+                voice1: {
+                    oscillator: { type: 'sawtooth' },
+                    envelope: { attack: 2.0, decay: 0.1, sustain: 1, release: 2 } // Slower attack
+                }
+            }).connect(counterMelodyDelay);
+
+            audioInitialized = true;
+        }
+
+        async function getTextPoints() {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const canvasSize = 2048;
+                canvas.width = canvasSize;
+                canvas.height = canvasSize;
+                ctx.font = '200px "ivypresto-display"';
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(TITLE_TEXT, canvasSize / 2, canvasSize / 2);
+                const imageData = ctx.getImageData(0, 0, canvasSize, canvasSize);
+                const points = [];
+                const density = 4;
+                for (let y = 0; y < canvasSize; y += density) {
+                    for (let x = 0; x < canvasSize; x += density) {
+                        const alpha = imageData.data[(y * canvasSize + x) * 4 + 3];
+                        if (alpha > 128) {
+                            const worldX = (x - canvasSize / 2) * 0.08;
+                            const worldY = -(y - canvasSize / 2) * 0.08;
+                            points.push(new THREE.Vector3(worldX, worldY, 0));
+                        }
+                    }
+                }
+                resolve(points);
+            });
+        }
+
+        function initScene() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = FIELD_RADIUS;
+            const canvas = document.getElementById('liminal-canvas');
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            composer = new THREE.EffectComposer(renderer);
+            composer.addPass(new THREE.RenderPass(scene, camera));
+            bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.6, 0.5, 0.8);
+            composer.addPass(bloomPass);
+        }
+
+        function initParticleScene() {
+            particleScene = new THREE.Scene();
+            particleCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            particleCamera.position.z = 2;
+            particleRenderer = new THREE.WebGLRenderer({ canvas: document.getElementById('particle-canvas'), antialias: true, alpha: true });
+            particleRenderer.setSize(window.innerWidth, window.innerHeight);
+            particleRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            const pCount = 80000;
+            const geometry = new THREE.BufferGeometry();
+            const pos = new Float32Array(pCount * 3);
+            const particleTypes = new Float32Array(pCount); 
+            for (let i = 0; i < pCount; i++) {
+                const i3 = i * 3; const r = Math.random() * 30; const a = Math.random() * Math.PI * 2;
+                pos[i3] = r * Math.cos(a); pos[i3 + 1] = r * Math.sin(a); pos[i3 + 2] = (Math.random() - .5) * 12;
+                particleTypes[i] = Math.random() < 0.2 ? 1.0 : 0.0;
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            geometry.setAttribute('aParticleType', new THREE.BufferAttribute(particleTypes, 1));
+            const material = new THREE.ShaderMaterial({
+                vertexShader: backgroundVertexShader, fragmentShader: backgroundFragmentShader,
+                uniforms: { uTime: { value: 0 } },
+                blending: THREE.AdditiveBlending, transparent: true, depthWrite: false
+            });
+            backgroundVisual = new THREE.Points(geometry, material);
+            particleScene.add(backgroundVisual);
+            particleComposer = new THREE.EffectComposer(particleRenderer);
+            particleComposer.addPass(new THREE.RenderPass(particleScene, particleCamera));
+            const secretBloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.3, 0.5, 0.1);
+            particleComposer.addPass(secretBloomPass);
+        }
+
+        async function initTicketButton() {
+            const canvas = document.getElementById('ticket-particle-canvas');
+            if (!canvas) return;
+
+            const width = 250;
+            const height = 80;
+
+            ticketParticleScene = new THREE.Scene();
+            ticketParticleCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+            ticketParticleCamera.position.z = 5;
+
+            ticketParticleRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+            ticketParticleRenderer.setSize(width, height);
+            ticketParticleRenderer.setPixelRatio(window.devicePixelRatio);
+
+            const textPoints = await getTicketTextPoints(width, height);
+            const numParticles = textPoints.length;
+
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(numParticles * 3);
+            const textPositions = new Float32Array(numParticles * 3);
+            const randomness = new Float32Array(numParticles);
+
+            for (let i = 0; i < numParticles; i++) {
+                positions.set([0, 0, 0], i * 3);
+                textPositions.set([textPoints[i].x, textPoints[i].y, 0], i * 3);
+                randomness[i] = Math.random();
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('aTextPosition', new THREE.BufferAttribute(textPositions, 3));
+            geometry.setAttribute('aRandomness', new THREE.BufferAttribute(randomness, 1));
+
+            const material = new THREE.ShaderMaterial({
+                vertexShader: ticketParticleVertexShader,
+                fragmentShader: ticketParticleFragmentShader,
+                uniforms: {
+                    uTime: { value: 0 },
+                    uHoverState: { value: 0.0 }
+                },
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                depthWrite: false
+            });
+
+            ticketParticles = new THREE.Points(geometry, material);
+            ticketParticleScene.add(ticketParticles);
+        }
+
+        function getTicketTextPoints(width, height) {
+            return new Promise(resolve => {
+                const tempCanvas = document.createElement('canvas');
+                const ctx = tempCanvas.getContext('2d');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+
+                const font = 'bold 24px "Inter", sans-serif';
+                ctx.font = font;
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('TICKETS', width / 2, height / 2);
+
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const points = [];
+                const density = 2; 
+                for (let y = 0; y < height; y += density) {
+                    for (let x = 0; x < width; x += density) {
+                        const alpha = imageData.data[(y * width + x) * 4 + 3];
+                        if (alpha > 128) {
+                            const worldX = (x / width - 0.5) * 3;
+                            const worldY = -(y / height - 0.5) * 1.5;
+                            points.push(new THREE.Vector3(worldX, worldY, 0));
+                        }
+                    }
+                }
+                resolve(points);
+            });
+        }
+
+
+        async function createParticles() {
+            const textPoints = await getTextPoints();
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(PARTICLE_COUNT * 3);
+            const targetPositions = new Float32Array(PARTICLE_COUNT * 3);
+            const sizes = new Float32Array(PARTICLE_COUNT);
+            const colors = new Float32Array(PARTICLE_COUNT * 3);
+            const randomness = new Float32Array(PARTICLE_COUNT);
+            const textTargetPositions = new Float32Array(PARTICLE_COUNT * 3);
+            const isTextParticle = new Float32Array(PARTICLE_COUNT);
+            const color1 = new THREE.Color("#4338ca");
+            const color2 = new THREE.Color("#a855f7");
+            const color3 = new THREE.Color("#10b981");
+            const textParticleIndices = new Set();
+            while (textParticleIndices.size < textPoints.length * 2 && textParticleIndices.size < PARTICLE_COUNT / 3) {
+                textParticleIndices.add(Math.floor(Math.random() * PARTICLE_COUNT));
+            }
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const i3 = i * 3;
+                const theta = Math.random() * 2 * Math.PI;
+                const phi = Math.acos((Math.random() * 2) - 1);
+                const r = Math.pow(Math.random(), 0.7) * FIELD_RADIUS;
+                targetPositions[i3] = r * Math.sin(phi) * Math.cos(theta);
+                targetPositions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+                targetPositions[i3 + 2] = r * Math.cos(phi);
+                positions.set([0, 0, 0], i3);
+                sizes[i] = Math.random() * 2.5 + 1.0;
+                const randomColor = color1.clone().lerp(color2, Math.random());
+                randomColor.lerp(color3, Math.random() * 0.4);
+                colors.set([randomColor.r, randomColor.g, randomColor.b], i3);
+                randomness[i] = Math.random();
+                isTextParticle[i] = 0.0;
+            }
+            const textParticleArray = Array.from(textParticleIndices);
+            textPoints.forEach((point, i) => {
+                const particleIndex = textParticleArray[i % textParticleArray.length];
+                if (particleIndex === undefined) return;
+                const i3 = particleIndex * 3;
+                isTextParticle[particleIndex] = 1.0;
+                textTargetPositions.set([point.x, point.y, point.z], i3);
+            });
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('aTargetPosition', new THREE.BufferAttribute(targetPositions, 3));
+            geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+            geometry.setAttribute('aColor', new THREE.BufferAttribute(colors, 3));
+            geometry.setAttribute('aRandomness', new THREE.BufferAttribute(randomness, 1));
+            geometry.setAttribute('aIsTextParticle', new THREE.BufferAttribute(isTextParticle, 1));
+            geometry.setAttribute('aTextTargetPosition', new THREE.BufferAttribute(textTargetPositions, 3));
+            const material = new THREE.ShaderMaterial({ 
+                vertexShader: particleVertexShader, 
+                fragmentShader: particleFragmentShader, 
+                uniforms: { 
+                    uTime: { value: 0 },
+                    uExpansionProgress: { value: 0.0 },
+                    uConvergenceProgress: { value: 0.0 },
+                    uDisintegrationProgress: { value: 0.0 },
+                    uDisperse: { value: 0.0 },
+                    uFieldRadius: { value: FIELD_RADIUS }
+                },
+                transparent: true, 
+                blending: THREE.AdditiveBlending, 
+                depthWrite: false
+            });
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+        }
+
+        function setupEventListeners() {
+            // Use debounced resize handler for performance
+            window.addEventListener('resize', debounce(onWindowResize, 250), false);
+            
+            const startOverlay = document.getElementById('start-overlay');
+            startOverlay.addEventListener('click', () => {
+                startOverlay.style.opacity = '0';
+                startOverlay.style.pointerEvents = 'none';
+                
+                // Start audio and visual sequence
+                Tone.start().then(() => {
+                    initAudio();
+                    runOpeningSequence();
+                    document.getElementById('mute-button').classList.add('visible');
+                });
+            }, { once: true });
+
+            const muteButton = document.getElementById('mute-button');
+            muteButton.addEventListener('click', () => {
+                if (!audioInitialized) return;
+                Tone.Master.mute = !Tone.Master.mute;
+                muteButton.className = Tone.Master.mute ? 'muted visible' : 'unmuted visible';
+            });
+
+            const passwordForm = document.getElementById('password-form');
+            const passwordInput = document.getElementById('password-input');
+            const ticketContainer = document.getElementById('ticket-particle-button');
+
+            passwordForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                checkPassword();
+            });
+
+            passwordInput.addEventListener('input', handleTyping);
+            
+            ticketContainer.addEventListener('mouseenter', () => {
+                if(ticketParticles) gsap.to(ticketParticles.material.uniforms.uHoverState, { value: 1.0, duration: 0.5, ease: "power2.out" });
+            });
+            ticketContainer.addEventListener('mouseleave', () => {
+                if(ticketParticles) gsap.to(ticketParticles.material.uniforms.uHoverState, { value: 0.0, duration: 0.5, ease: "power2.inOut" });
+            });
+
+            window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('keyup', handleKeyUp);
+            window.addEventListener('touchstart', handleTouchStart);
+
+            const hintIcon = document.getElementById('hint-icon');
+            const hintTooltip = document.getElementById('hint-tooltip');
+            hintIcon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                hintTooltip.classList.toggle('visible');
+            });
+            document.addEventListener('click', () => {
+                if (hintTooltip.classList.contains('visible')) {
+                    hintTooltip.classList.remove('visible');
+                }
+            });
+        }
+
+        function handleKeyDown(e) {
+            if (isTransitioning || activeScene !== 'title') return;
+            keysPressed.add(e.code);
+            if (keysPressed.has('KeyS') && keysPressed.has('Digit1') && keysPressed.has('Digit0')) {
+                isTransitioning = true;
+                transitionToSecretPage();
+            }
+        }
+
+        function handleKeyUp(e) {
+            keysPressed.delete(e.code);
+        }
+
+        function handleTouchStart() {
+            if (isTransitioning || activeScene !== 'title') return;
+            clearTimeout(tapTimer);
+            tapCount++;
+            if (tapCount >= 7) {
+                isTransitioning = true;
+                transitionToSecretPage();
+            } else {
+                tapTimer = setTimeout(() => {
+                    tapCount = 0;
+                }, 500); 
+            }
+        }
+
+        function transitionToSecretPage() {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+            window.removeEventListener('touchstart', handleTouchStart);
+
+            const riddleOverlay = document.getElementById('riddle-overlay');
+            const canvasContainer = document.getElementById('liminal-canvas-container');
+            const particleCanvasContainer = document.getElementById('particle-canvas-container');
+            const animatedTextContainer = document.getElementById('animated-text-container');
+            const socialLinksContainer = document.getElementById('social-links-container');
+            
+            gsap.killTweensOf(riddleOverlay);
+
+            if (audioInitialized) {
+                Tone.Transport.stop();
+                Tone.Transport.cancel();
+                droneSynth.volume.rampTo(-Infinity, 1);
+                padSynth.volume.rampTo(-Infinity, 1);
+                arp.stop();
+            }
+            document.getElementById('mute-button').classList.remove('visible');
+
+            gsap.to([riddleOverlay, canvasContainer], {
+                duration: 1.5, opacity: 0, ease: "power2.inOut",
+                onComplete: () => {
+                    if (riddleOverlay) riddleOverlay.classList.remove('visible');
+                    if (canvasContainer) canvasContainer.classList.add('hidden');
+                    activeScene = 'secret';
+                    startTextAnimation();
+                }
+            });
+
+            if (particleCanvasContainer) particleCanvasContainer.classList.remove('hidden');
+            gsap.to(particleCanvasContainer, { duration: 1.5, opacity: 1, ease: "power2.inOut" });
+            if (animatedTextContainer) animatedTextContainer.classList.add('visible');
+            if (socialLinksContainer) socialLinksContainer.classList.add('visible');
+        }
+
+        function handleTyping(e) {
+            if (isTransitioning) return;
+            const currentInput = e.target.value.toUpperCase();
+            let matchCount = 0;
+            const target = "LIMINAL";
+            for(let i = 0; i < currentInput.length; i++) {
+                if (i < target.length && currentInput[i] === target[i]) {
+                    matchCount++;
+                } else {
+                    matchCount = 0;
+                    break;
+                }
+            }
+            const glowAmount = (matchCount / target.length) * 0.6;
+            gsap.to(visualFeedback, { glow: glowAmount, duration: 0.5, ease: 'power2.out' });
+
+            if (CORRECT_PASSWORDS.includes(currentInput)) {
+                checkPassword(true);
+            }
+        }
+        
+        function checkPassword(isAutoTrigger = false) {
+            if (isTransitioning) return;
+            const passwordInput = document.getElementById('password-input');
+            const passwordForm = document.getElementById('password-form');
+            const enteredPassword = passwordInput.value.toUpperCase().trim();
+
+            if (isAutoTrigger || CORRECT_PASSWORDS.includes(enteredPassword)) {
+                isTransitioning = true; 
+                passwordInput.blur();
+                
+                gsap.to(visualFeedback, { 
+                    glow: 1.5, 
+                    duration: 0.5, 
+                    ease: 'power2.out'
+                });
+
+                transitionToSecretPage();
+            } else {
+                passwordForm.classList.add('error');
+                passwordInput.value = '';
+                setTimeout(() => passwordForm.classList.remove('error'), 500);
+
+                gsap.to(visualFeedback, { 
+                    disperse: 5.0, 
+                    duration: 1.5,
+                    ease: 'power2.out',
+                    yoyo: true,
+                    repeat: 1
+                });
+            }
+        }
+        
+        function startTextAnimation() {
+            const textElement = document.getElementById('animated-text');
+            const flickerElement = document.getElementById('flicker-text');
+            const dateLeftElement = document.getElementById('event-date-left');
+            const dateRightElement = document.getElementById('event-date-right');
+            if (!textElement || !flickerElement || !dateLeftElement || !dateRightElement) return;
+            
+            textElement.textContent = "SURFACE TENSION";
+
+            const eventTitle = encodeURIComponent("SURFACE TENSION - DIGITAL DRIP AT SEXTANT");
+            const eventLocation = encodeURIComponent("539 Valencia Street, San Francisco, CA");
+            const eventDetails = encodeURIComponent(
+                "Experience the intersection of digital art and specialty coffee.\n\nAn immersive art showcase from 5:00 PM to 6:30 PM, featuring exclusive digital installations and signature drinks crafted for the event.\n\nThe evening then transitions into a vibrant rave space with a live DJ set beginning at 7 PM. Expect exciting surprises and special gifts throughout the night.\n\n---\n\nFollow the journey:\nInstagram: https://www.instagram.com/surfacetension.co\nTikTok: https://www.tiktok.com/@surfacetension.co\nWebsite: https://www.surfacetension.co"
+            );
+            const calendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${eventTitle}&dates=20250726T170000/20250726T220000&location=${eventLocation}&details=${eventDetails}`;
+            
+            dateLeftElement.innerHTML = `<a href="${calendarUrl}" target="_blank" rel="noopener noreferrer">JULY 26TH, 2025</a>`;
+            dateRightElement.innerHTML = `<a href="${calendarUrl}" target="_blank" rel="noopener noreferrer">5:00PM</a>`;
+
+            gsap.timeline({repeat: -1, repeatDelay: 2.5})
+                .to(flickerElement, {
+                    duration: 0.1,
+                    opacity: 0.3,
+                    textShadow: '0 0 20px #10b981, 0 0 40px #10b981'
+                })
+                .to(flickerElement, { duration: 0.05, opacity: 1 })
+                .to(flickerElement, { duration: 0.05, opacity: 0.5, delay: 0.2 })
+                .to(flickerElement, { duration: 0.05, opacity: 1 })
+                .to(flickerElement, { duration: 0.1, opacity: 0.2, delay: 0.5 })
+                .to(flickerElement, { duration: 0.2, opacity: 1, textShadow: '0 0 10px #10b981, 0 0 20px #10b981' });
+        }
+        
+        function runOpeningSequence() {
+            const riddleOverlay = document.getElementById('riddle-overlay');
+            const tl = gsap.timeline();
+
+            if (audioInitialized) {
+                Tone.Transport.bpm.value = 110; 
+                Tone.Transport.start();
+
+                droneSynth.triggerAttack("C1", Tone.now());
+
+                const audioStartTime = "2.0s";
+
+                const chordProgression = [
+                    { time: "0:0", note: "Cm", duration: "1m" },
+                    { time: "1:0", note: "Gm", duration: "1m" },
+                    { time: "2:0", note: "Fm", duration: "1m" },
+                    { time: "3:0", note: "Cm", duration: "1m" },
+                    { time: "4:0", note: "Fm", duration: "2m" }, 
+                    { time: "6:0", note: "Cm", duration: "2m" }
+                ];
+
+                new Tone.Part((time, value) => {
+                    let chord;
+                    switch(value.note) {
+                        case "Cm": chord = ["C3", "Eb3", "G3"]; arp.values = ["C2", "Eb2", "G2", "C3"]; break;
+                        case "Gm": chord = ["G3", "Bb3", "D4"]; arp.values = ["G2", "Bb2", "D3", "G3"]; break;
+                        case "Fm": chord = ["F3", "Ab3", "C4"]; arp.values = ["F2", "Ab2", "C3", "F3"]; break;
+                    }
+                    padSynth.triggerAttackRelease(chord, value.duration, time);
+                }, chordProgression).start(audioStartTime);
+
+                arp.start(audioStartTime);
+                
+                // MODIFIED: New evolving counter-melody for variation
+                const melodySequence = new Tone.Sequence((time, note) => {
+                    counterMelody.triggerAttackRelease(note, '1n', time);
+                }, [null, 'G4', 'Eb4', null, 'F4', null, 'C4', null], '2n').start("7s"); // Delayed start
+                melodySequence.humanize = true;
+
+
+                padSynth.volume.rampTo(-18, 0.1, audioStartTime);
+                if (padFilter) {
+                    padFilter.frequency.rampTo(4000, 8, Tone.now() + 2.5); 
+                }
+            }
+
+            tl.to(particles.material.uniforms.uExpansionProgress, {
+                value: 1.0,
+                duration: 6,
+                ease: 'power3.out'
+            }, "start");
+            
+            tl.to(particles.material.uniforms.uConvergenceProgress, {
+                value: 1.0,
+                duration: 8.5,
+                ease: 'power2.inOut',
+                onStart: () => {
+                    if (audioInitialized) {
+                         climaxChime.triggerAttack(Tone.now() + 0.1);
+                    }
+                }
+            }, "start+=4.0");
+
+            tl.to(particles.material.uniforms.uDisintegrationProgress, {
+                value: 1.0,
+                duration: 3.5, 
+                ease: 'power2.in',
+                onStart: () => {
+                    if (audioInitialized) {
+                        disintegrateNoise.triggerAttack(Tone.now() + 0.1);
+                    }
+                }
+            }, "start+=13.5");
+
+            tl.to(riddleOverlay, {
+                opacity: 1,
+                duration: 1.5,
+                ease: 'power2.out',
+                onStart: () => {
+                    if (riddleOverlay) riddleOverlay.classList.add('visible');
+                    if(audioInitialized) {
+                        const outroTime = Tone.Transport.now() + 40; 
+                        padSynth.volume.rampTo(-Infinity, 5, outroTime);
+                        counterMelody.volume.rampTo(-Infinity, 6, outroTime);
+                        arp.stop(outroTime + 4);
+                        droneSynth.volume.rampTo(-Infinity, 8, outroTime + 1);
+                        
+                        Tone.Transport.stop(outroTime + 10);
+                    }
+                }
+            }, ">-1.0");
+        }
+        
+        function onWindowResize() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+            composer.setSize(width, height);
+
+            if(particleCamera) {
+                particleCamera.aspect = width / height;
+                particleCamera.updateProjectionMatrix();
+            }
+            if(particleRenderer) {
+                particleRenderer.setSize(width, height);
+            }
+            if(particleComposer) {
+                particleComposer.setSize(width, height);
+            }
+            
+            if (ticketParticleCamera) {
+                const ticketCanvas = document.getElementById('ticket-particle-canvas');
+                if (ticketCanvas) {
+                    const container = ticketCanvas.parentElement;
+                    const newWidth = container.clientWidth;
+                    const newHeight = container.clientHeight;
+
+                    if (newWidth > 0 && newHeight > 0) {
+                        ticketParticleCamera.aspect = newWidth / newHeight;
+                        ticketParticleCamera.updateProjectionMatrix();
+                        if(ticketParticleRenderer) {
+                           ticketParticleRenderer.setSize(newWidth, newHeight);
+                        }
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+            
+            if (activeScene === 'title' && particles) {
+                particles.material.uniforms.uTime.value = elapsedTime;
+                particles.material.uniforms.uDisperse.value = visualFeedback.disperse;
+                if (bloomPass) {
+                    bloomPass.strength = 0.6 + visualFeedback.glow;
+                }
+                composer.render();
+            } else if (activeScene === 'secret') {
+                if (backgroundVisual) {
+                    backgroundVisual.material.uniforms.uTime.value = elapsedTime;
+                    backgroundVisual.rotation.z += 3e-5;
+                }
+                if (particleCamera) {
+                    particleCamera.position.z -= 0.003;
+                    if (particleCamera.position.z < -5) particleCamera.position.z = 2;
+                }
+                particleComposer.render();
+            }
+
+            if (ticketParticles) {
+                ticketParticles.material.uniforms.uTime.value = elapsedTime;
+                ticketParticleRenderer.render(ticketParticleScene, ticketParticleCamera);
+            }
+        }
+
+        init();
+    });
+
+    function copyCode(event) {
+        event.preventDefault(); 
+        event.stopPropagation();
+
+        const code = document.getElementById('access-code-text').innerText;
+        
+        try {
+            const textArea = document.createElement("textarea");
+            textArea.value = code;
+            textArea.style.position = "fixed"; 
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+
+            const notification = document.getElementById('copy-notification');
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 2000);
+        } catch (err) {
+            console.error('Fallback: Oops, unable to copy', err);
+        }
+    }
+    </script>
+</body>
+</html>
