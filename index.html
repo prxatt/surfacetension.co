@@ -319,24 +319,52 @@
             text-shadow: 0 0 15px rgba(168, 85, 247, 0.6);
         }
         
-        #ticket-particle-button {
+        #neon-tickets-box {
             margin-top: 3rem;
             position: relative;
-            width: 250px;
-            height: 80px;
+            display: inline-block;
             cursor: pointer;
+            text-decoration: none;
+            padding: 1rem 2rem;
+            border: 2px solid #00ffff;
             border-radius: 8px;
-            transition: background-color 0.3s;
+            background: rgba(0, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.3),
+                inset 0 0 20px rgba(0, 255, 255, 0.1);
         }
-        #ticket-particle-button:hover {
-            background-color: rgba(255, 255, 255, 0.05);
+        
+        #neon-tickets-box:hover {
+            background: rgba(0, 255, 255, 0.15);
+            box-shadow: 
+                0 0 40px rgba(0, 255, 255, 0.6),
+                0 0 80px rgba(0, 255, 255, 0.3),
+                inset 0 0 30px rgba(0, 255, 255, 0.2);
+            transform: translateY(-2px);
+            border-color: #66ffff;
         }
-        #ticket-particle-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        
+        #neon-tickets-text {
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 1.2rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: #00ffff;
+            text-shadow: 
+                0 0 10px rgba(0, 255, 255, 0.8),
+                0 0 20px rgba(0, 255, 255, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        #neon-tickets-box:hover #neon-tickets-text {
+            color: #66ffff;
+            text-shadow: 
+                0 0 20px rgba(0, 255, 255, 1),
+                0 0 40px rgba(0, 255, 255, 0.6),
+                0 0 60px rgba(0, 255, 255, 0.3);
         }
 
         #access-code-wrapper {
@@ -496,6 +524,16 @@
                 text-align: center;
                 padding: 0 1rem;
             }
+            
+            #neon-tickets-box {
+                padding: 0.8rem 1.5rem;
+                margin-top: 2rem;
+            }
+            
+            #neon-tickets-text {
+                font-size: 1rem;
+                letter-spacing: 0.15em;
+            }
         }
         
         @media (max-height: 500px) {
@@ -518,6 +556,10 @@
             
             #password-input {
                 font-size: 1rem;
+            }
+            
+            #neon-tickets-text {
+                font-size: 0.9rem;
             }
         }
 
@@ -582,8 +624,8 @@
         <h1 id="animated-text"></h1>
         <p id="subtext"><span id="flicker-text">Digital Drip</span> : <a href="https://www.eventbrite.com/e/surface-tension-digital-drip-an-after-hours-art-rave-tickets-1471279469499?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl" target="_blank" rel="noopener noreferrer" class="subheading-rave">An After-Hours Art Rave</a></p>
         
-        <a id="ticket-particle-button" href="https://www.eventbrite.com/e/surface-tension-digital-drip-an-after-hours-art-rave-tickets-1471279469499?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl" target="_blank" rel="noopener noreferrer" aria-label="Purchase Tickets">
-            <canvas id="ticket-particle-canvas"></canvas>
+        <a id="neon-tickets-box" href="https://www.eventbrite.com/e/surface-tension-digital-drip-an-after-hours-art-rave-tickets-1471279469499?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl" target="_blank" rel="noopener noreferrer" aria-label="Purchase Tickets">
+            <div id="neon-tickets-text">TICKETS</div>
         </a>
 
         <div id="access-code-wrapper">
@@ -636,12 +678,13 @@
         // -- Scene Variables --
         let scene, camera, renderer, particles, composer, bloomPass;
         let particleScene, particleCamera, particleRenderer, particleComposer, backgroundVisual;
-        let ticketParticleScene, ticketParticleCamera, ticketParticleRenderer, ticketParticles;
         let sextantCubeScene, sextantCubeCamera, sextantCubeRenderer, sextantCube;
         
-        // -- Audio variables
+        // -- Audio variables with mobile optimization --
         let audioInitialized = false;
+        let audioContext = null;
         let droneSynth, arp, padSynth, disintegrateNoise, climaxChime, masterReverb, masterChorus, padFilter, cinematicLead;
+        let silentAudioBuffer = null;
 
         let visualFeedback = { disperse: 0, glow: 0 };
 
@@ -666,7 +709,7 @@
             };
         };
 
-        // -- OPTIMIZATION: Enhanced device capability detection
+        // -- ENHANCED: Mobile device detection with audio capabilities
         function getDeviceCapabilities() {
             const canvas = document.createElement('canvas');
             const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -677,8 +720,11 @@
                 screenWidth: window.innerWidth,
                 screenHeight: window.innerHeight,
                 isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
-                isLowEnd: false,
-                memoryInfo: navigator.deviceMemory || 4 // Default to 4GB if unknown
+                isIOS: /iPhone|iPad|iPod/i.test(navigator.userAgent),
+                isAndroid: /Android/i.test(navigator.userAgent),
+                memoryInfo: navigator.deviceMemory || 4,
+                hasAudioContext: !!(window.AudioContext || window.webkitAudioContext),
+                isLowEnd: false
             };
             
             // Enhanced low-end device detection
@@ -693,7 +739,7 @@
 
         const DEVICE_CAPABILITIES = getDeviceCapabilities();
 
-        // -- OPTIMIZATION: More aggressive adaptive settings
+        // -- OPTIMIZATION: Device-adaptive settings with corrected mobile text scale
         function getOptimalSettings() {
             const capabilities = DEVICE_CAPABILITIES;
             
@@ -996,107 +1042,10 @@
                 gl_FragColor = vec4(vColor, strength * vAlpha);
             }
         `;
-        
-        const ticketParticleVertexShader = `
-            uniform float uTime;
-            uniform float uHoverState;
-            
-            attribute vec3 aTextPosition;
-            attribute float aRandomness;
-
-            varying vec3 vColor;
-
-            vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-            vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-            vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
-            vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
-            float snoise(vec3 v) {
-                const vec2 C = vec2(1.0/6.0, 1.0/3.0);
-                const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-                vec3 i  = floor(v + dot(v, C.yyy));
-                vec3 x0 = v - i + dot(i, C.xxx);
-                vec3 g = step(x0.yzx, x0.xyz);
-                vec3 l = 1.0 - g;
-                vec3 i1 = min(g.xyz, l.zxy);
-                vec3 i2 = max(g.xyz, l.zxy);
-                vec3 x1 = x0 - i1 + C.xxx;
-                vec3 x2 = x0 - i2 + C.yyy;
-                vec3 x3 = x0 - D.yyy;
-                i = mod289(i);
-                vec4 p = permute(permute(permute(
-                            i.z + vec4(0.0, i1.z, i2.z, 1.0))
-                        + i.y + vec4(0.0, i1.y, i2.y, 1.0))
-                        + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-                float n_ = 0.142857142857;
-                vec3 ns = n_ * D.wyz - D.xzx;
-                vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-                vec4 x_ = floor(j * ns.z);
-                vec4 y_ = floor(j - 7.0 * x_);
-                vec4 x = x_ * ns.x + ns.yyyy;
-                vec4 y = y_ * ns.x + ns.yyyy;
-                vec4 h = 1.0 - abs(x) - abs(y);
-                vec4 b0 = vec4(x.xy, y.xy);
-                vec4 b1 = vec4(x.zw, y.zw);
-                vec4 s0 = floor(b0)*2.0 + 1.0;
-                vec4 s1 = floor(b1)*2.0 + 1.0;
-                vec4 sh = -step(h, vec4(0.0));
-                vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
-                vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
-                vec3 p0 = vec3(a0.xy,h.x);
-                vec3 p1 = vec3(a0.zw,h.y);
-                vec3 p2 = vec3(a1.xy,h.z);
-                vec3 p3 = vec3(a1.zw,h.w);
-                vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
-                p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
-                vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
-                m = m * m;
-                return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
-            }
-
-            void main() {
-                // Swirling vortex state
-                float angle = aRandomness * 3.14159 * 2.0 + uTime * 0.5;
-                float radius = 0.5 + aRandomness * 0.8;
-                vec3 swirlPos = vec3(cos(angle) * radius, sin(angle) * radius, snoise(vec3(position.xy, uTime * 0.2)) * 0.2);
-                
-                // Mix between swirl and text
-                float progress = smoothstep(0.0, 1.0, uHoverState);
-                vec3 pos = mix(swirlPos, aTextPosition, progress);
-
-                // Add some jitter
-                pos.x += snoise(vec3(pos.yz * 2.0, uTime)) * 0.01 * (1.0 - progress);
-                pos.y += snoise(vec3(pos.xz * 2.0, uTime)) * 0.01 * (1.0 - progress);
-
-                vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-                
-                // Color based on hover state and randomness
-                vec3 color1 = vec3(0.66, 0.33, 0.98); // Purple
-                vec3 color2 = vec3(0.06, 0.73, 0.51); // Green
-                vec3 color3 = vec3(1.0, 1.0, 1.0);    // White
-                vec3 finalColor = mix(color1, color2, aRandomness);
-                vColor = mix(finalColor, color3, progress);
-
-                gl_PointSize = (1.0 - progress) * 1.5 + progress * 1.2;
-                gl_PointSize *= ( 60.0 / -mvPosition.z );
-
-                gl_Position = projectionMatrix * mvPosition;
-            }
-        `;
-
-        const ticketParticleFragmentShader = `
-            varying vec3 vColor;
-            void main() {
-                float dist = distance(gl_PointCoord, vec2(0.5));
-                float strength = 1.0 - dist * 2.0;
-                if (strength < 0.0) discard;
-                gl_FragColor = vec4(vColor, strength * 0.8);
-            }
-        `;
 
         async function init() {
             initScene(); 
             initParticleScene();
-            await initTicketButton(); 
             await initSextantCube();
             await createParticles();
             setupEventListeners();
@@ -1137,127 +1086,222 @@
             }
         }
         
-        // MOBILE AUDIO INITIALIZATION - Multiple aggressive strategies
-        function initAudio() {
-            if (audioInitialized) return;
-
-            const mobileVolumeBoost = DEVICE_CAPABILITIES.isMobile ? 20 : 0;
-
-            if (DEVICE_CAPABILITIES.isMobile) {
-                Tone.Master.volume.value = 8;
+        // RE-ENGINEERED MOBILE AUDIO SYSTEM - Comprehensive approach
+        async function createSilentAudioBuffer() {
+            if (!audioContext) return null;
+            
+            const sampleRate = audioContext.sampleRate;
+            const buffer = audioContext.createBuffer(1, sampleRate * 0.1, sampleRate); // 100ms of silence
+            const channelData = buffer.getChannelData(0);
+            
+            // Fill with very quiet noise to help with iOS unlock
+            for (let i = 0; i < channelData.length; i++) {
+                channelData[i] = (Math.random() * 2 - 1) * 0.001;
             }
-
-            // Master effects chain
-            masterReverb = new Tone.Reverb(4).toDestination();
-            masterReverb.wet.value = 0.6;
-            masterChorus = new Tone.Chorus(2, 2.5, 0.7).connect(masterReverb);
-
-            // Audio synthesis with mobile optimization
-            droneSynth = new Tone.FMSynth({
-                volume: -24 + mobileVolumeBoost,
-                harmonicity: 0.5,
-                modulationIndex: 10,
-                envelope: { attack: 4, decay: 0.1, sustain: 1, release: 4 },
-                modulationEnvelope: { attack: 4, decay: 0.1, sustain: 1, release: 4 }
-            }).connect(masterChorus);
-
-            const arpFilter = new Tone.AutoFilter("8n").start();
-            const arpSynth = new Tone.MonoSynth({
-                volume: -12 + mobileVolumeBoost,
-                oscillator: { type: "sawtooth" },
-                filter: { Q: 2, type: "lowpass", rolloff: -24 },
-                envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.1 }
-            }).connect(arpFilter).connect(masterChorus);
-            arp = new Tone.Pattern((time, note) => {
-                arpSynth.triggerAttackRelease(note, "16n", time);
-            }, ["C2", "Eb2", "G2", "Bb2"], "up");
-            arp.interval = "16n";
-
-            padFilter = new Tone.Filter(400, "lowpass").connect(masterChorus);
-            padSynth = new Tone.PolySynth(Tone.FMSynth, {
-                volume: -18 + mobileVolumeBoost,
-                harmonicity: 1.5,
-                modulationIndex: 5,
-                envelope: { attack: 3, decay: 0.5, sustain: 1, release: 5 }
-            }).connect(padFilter);
-
-            disintegrateNoise = new Tone.NoiseSynth({
-                volume: -20 + mobileVolumeBoost,
-                noise: { type: 'white' },
-                envelope: { attack: 0.01, decay: 1.5, sustain: 0 }
-            }).connect(masterReverb);
-
-            climaxChime = new Tone.MetalSynth({
-                volume: -10 + mobileVolumeBoost,
-                frequency: 300,
-                envelope: { attack: 0.001, decay: 1.4, release: 0.2 },
-                harmonicity: 5.1,
-                modulationIndex: 32,
-                resonance: 4000,
-                octaves: 1.5
-            }).connect(masterReverb);
-
-            const cinematicDelay = new Tone.FeedbackDelay("8n", 0.4).connect(masterChorus);
-            cinematicDelay.wet.value = 0.7;
             
-            const cinematicChorus = new Tone.Chorus({
-                frequency: 1.5,
-                delayTime: 3.5,
-                depth: 0.8,
-                spread: 180
-            }).connect(cinematicDelay);
-            
-            const cinematicFilter = new Tone.Filter({
-                type: "lowpass",
-                frequency: 2000,
-                Q: 1.4
-            }).connect(cinematicChorus);
-
-            cinematicLead = new Tone.DuoSynth({
-                volume: -20 + mobileVolumeBoost,
-                vibratoAmount: 0.2,
-                vibratoRate: 4,
-                harmonicity: 1.5,
-                voice0: {
-                    oscillator: { 
-                        type: 'sawtooth',
-                        partials: [1, 0.5, 0.3, 0.25, 0.2]
-                    },
-                    envelope: { 
-                        attack: 2.5, 
-                        decay: 0.3, 
-                        sustain: 0.8, 
-                        release: 3.5 
-                    },
-                    filter: {
-                        Q: 2,
-                        type: 'lowpass',
-                        rolloff: -12
-                    }
-                },
-                voice1: {
-                    oscillator: { 
-                        type: 'pulse',
-                        width: 0.3
-                    },
-                    envelope: { 
-                        attack: 3.0, 
-                        decay: 0.2, 
-                        sustain: 0.6, 
-                        release: 4.0 
-                    },
-                    filter: {
-                        Q: 1.5,
-                        type: 'lowpass',
-                        rolloff: -12
-                    }
-                }
-            }).connect(cinematicFilter);
-
-            audioInitialized = true;
+            return buffer;
         }
 
-        // DEVICE-ADAPTIVE TEXT GENERATION - Desktop perfect, mobile optimized
+        async function unlockAudioContext() {
+            if (!audioContext || audioContext.state === 'running') return true;
+            
+            try {
+                // Method 1: Standard resume
+                await audioContext.resume();
+                
+                if (audioContext.state === 'running') {
+                    console.log('Audio context unlocked via resume');
+                    return true;
+                }
+                
+                // Method 2: Play silent buffer (iOS-specific)
+                if (silentAudioBuffer && DEVICE_CAPABILITIES.isIOS) {
+                    const source = audioContext.createBufferSource();
+                    source.buffer = silentAudioBuffer;
+                    source.connect(audioContext.destination);
+                    source.start(0);
+                    
+                    await new Promise(resolve => setTimeout(resolve, 150));
+                    
+                    if (audioContext.state === 'running') {
+                        console.log('Audio context unlocked via silent buffer');
+                        return true;
+                    }
+                }
+                
+                // Method 3: Create and play oscillator briefly
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                gainNode.gain.setValueAtTime(0.001, audioContext.currentTime);
+                oscillator.frequency.setValueAtTime(220, audioContext.currentTime);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.01);
+                
+                await new Promise(resolve => setTimeout(resolve, 20));
+                
+                return audioContext.state === 'running';
+                
+            } catch (error) {
+                console.error('Audio unlock failed:', error);
+                return false;
+            }
+        }
+
+        async function initAudio() {
+            if (audioInitialized) return;
+
+            try {
+                // Create audio context with enhanced mobile compatibility
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextClass) {
+                    console.error('AudioContext not supported');
+                    return;
+                }
+
+                audioContext = new AudioContextClass({
+                    sampleRate: DEVICE_CAPABILITIES.isMobile ? 44100 : 48000,
+                    latencyHint: DEVICE_CAPABILITIES.isMobile ? 'playback' : 'interactive'
+                });
+
+                // Create silent buffer for iOS unlock
+                silentAudioBuffer = await createSilentAudioBuffer();
+
+                // Attempt initial unlock
+                const unlocked = await unlockAudioContext();
+                
+                if (!unlocked && DEVICE_CAPABILITIES.isMobile) {
+                    console.warn('Initial audio unlock failed, will retry on user interaction');
+                }
+
+                // Initialize Tone.js with the created context
+                Tone.setContext(audioContext);
+                
+                // Mobile volume optimization
+                const mobileVolumeBoost = DEVICE_CAPABILITIES.isMobile ? 25 : 0;
+                if (DEVICE_CAPABILITIES.isMobile) {
+                    Tone.Master.volume.value = 10; // Very high for mobile
+                }
+
+                // Master effects chain
+                masterReverb = new Tone.Reverb(4).toDestination();
+                masterReverb.wet.value = 0.6;
+                masterChorus = new Tone.Chorus(2, 2.5, 0.7).connect(masterReverb);
+
+                // Audio synthesis with enhanced mobile optimization
+                droneSynth = new Tone.FMSynth({
+                    volume: -20 + mobileVolumeBoost,
+                    harmonicity: 0.5,
+                    modulationIndex: 10,
+                    envelope: { attack: 4, decay: 0.1, sustain: 1, release: 4 },
+                    modulationEnvelope: { attack: 4, decay: 0.1, sustain: 1, release: 4 }
+                }).connect(masterChorus);
+
+                const arpFilter = new Tone.AutoFilter("8n").start();
+                const arpSynth = new Tone.MonoSynth({
+                    volume: -8 + mobileVolumeBoost,
+                    oscillator: { type: "sawtooth" },
+                    filter: { Q: 2, type: "lowpass", rolloff: -24 },
+                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.1 }
+                }).connect(arpFilter).connect(masterChorus);
+                
+                arp = new Tone.Pattern((time, note) => {
+                    arpSynth.triggerAttackRelease(note, "16n", time);
+                }, ["C2", "Eb2", "G2", "Bb2"], "up");
+                arp.interval = "16n";
+
+                padFilter = new Tone.Filter(400, "lowpass").connect(masterChorus);
+                padSynth = new Tone.PolySynth(Tone.FMSynth, {
+                    volume: -14 + mobileVolumeBoost,
+                    harmonicity: 1.5,
+                    modulationIndex: 5,
+                    envelope: { attack: 3, decay: 0.5, sustain: 1, release: 5 }
+                }).connect(padFilter);
+
+                disintegrateNoise = new Tone.NoiseSynth({
+                    volume: -16 + mobileVolumeBoost,
+                    noise: { type: 'white' },
+                    envelope: { attack: 0.01, decay: 1.5, sustain: 0 }
+                }).connect(masterReverb);
+
+                climaxChime = new Tone.MetalSynth({
+                    volume: -6 + mobileVolumeBoost,
+                    frequency: 300,
+                    envelope: { attack: 0.001, decay: 1.4, release: 0.2 },
+                    harmonicity: 5.1,
+                    modulationIndex: 32,
+                    resonance: 4000,
+                    octaves: 1.5
+                }).connect(masterReverb);
+
+                const cinematicDelay = new Tone.FeedbackDelay("8n", 0.4).connect(masterChorus);
+                cinematicDelay.wet.value = 0.7;
+                
+                const cinematicChorus = new Tone.Chorus({
+                    frequency: 1.5,
+                    delayTime: 3.5,
+                    depth: 0.8,
+                    spread: 180
+                }).connect(cinematicDelay);
+                
+                const cinematicFilter = new Tone.Filter({
+                    type: "lowpass",
+                    frequency: 2000,
+                    Q: 1.4
+                }).connect(cinematicChorus);
+
+                cinematicLead = new Tone.DuoSynth({
+                    volume: -16 + mobileVolumeBoost,
+                    vibratoAmount: 0.2,
+                    vibratoRate: 4,
+                    harmonicity: 1.5,
+                    voice0: {
+                        oscillator: { 
+                            type: 'sawtooth',
+                            partials: [1, 0.5, 0.3, 0.25, 0.2]
+                        },
+                        envelope: { 
+                            attack: 2.5, 
+                            decay: 0.3, 
+                            sustain: 0.8, 
+                            release: 3.5 
+                        },
+                        filter: {
+                            Q: 2,
+                            type: 'lowpass',
+                            rolloff: -12
+                        }
+                    },
+                    voice1: {
+                        oscillator: { 
+                            type: 'pulse',
+                            width: 0.3
+                        },
+                        envelope: { 
+                            attack: 3.0, 
+                            decay: 0.2, 
+                            sustain: 0.6, 
+                            release: 4.0 
+                        },
+                        filter: {
+                            Q: 1.5,
+                            type: 'lowpass',
+                            rolloff: -12
+                        }
+                    }
+                }).connect(cinematicFilter);
+
+                audioInitialized = true;
+                console.log('Audio system initialized successfully');
+
+            } catch (error) {
+                console.error('Audio initialization failed:', error);
+                audioInitialized = false;
+            }
+        }
+
+        // CORRECTED TEXT GENERATION - Restore original desktop scale, increase mobile scale
         async function getTextPoints() {
             return new Promise((resolve) => {
                 const canvas = document.createElement('canvas');
@@ -1267,10 +1311,10 @@
                 const isMobile = viewportWidth < 768;
                 
                 if (isMobile) {
-                    // Mobile-specific optimization
+                    // CORRECTED mobile implementation - increased scale for bigger text
                     const canvasSize = 1536;
-                    const fontSize = 120;
-                    const scaling = 0.022; // Very conservative for mobile
+                    const fontSize = 130; // Increased font size
+                    const scaling = 0.045; // INCREASED scaling for bigger mobile text
                     
                     canvas.width = canvasSize;
                     canvas.height = canvasSize;
@@ -1279,7 +1323,7 @@
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     
-                    // Split text for better mobile fitting
+                    // Split text for better mobile fitting but with bigger scale
                     const words = TITLE_TEXT.split(' ');
                     const line1 = words[0];
                     const line2 = words.slice(1).join(' ');
@@ -1289,7 +1333,7 @@
                     
                     const imageData = ctx.getImageData(0, 0, canvasSize, canvasSize);
                     const points = [];
-                    const density = 4;
+                    const density = 3; // Better density for quality
                     
                     for (let y = 0; y < canvasSize; y += density) {
                         for (let x = 0; x < canvasSize; x += density) {
@@ -1303,10 +1347,10 @@
                     }
                     resolve(points);
                 } else {
-                    // Desktop version - keep existing perfect implementation
+                    // RESTORED original desktop implementation
                     const canvasSize = 2048;
                     const fontSize = 180;
-                    const scaling = 0.035;
+                    const scaling = 0.045; // RESTORED original desktop scaling
                     
                     canvas.width = canvasSize;
                     canvas.height = canvasSize;
@@ -1403,86 +1447,6 @@
             particleComposer.addPass(new THREE.RenderPass(particleScene, particleCamera));
             const secretBloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.5, 0.1);
             particleComposer.addPass(secretBloomPass);
-        }
-
-        async function initTicketButton() {
-            const canvas = document.getElementById('ticket-particle-canvas');
-            if (!canvas) return;
-
-            const width = 250;
-            const height = 80;
-
-            ticketParticleScene = new THREE.Scene();
-            ticketParticleCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-            ticketParticleCamera.position.z = 5;
-
-            ticketParticleRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-            ticketParticleRenderer.setSize(width, height);
-            ticketParticleRenderer.setPixelRatio(window.devicePixelRatio);
-
-            const textPoints = await getTicketTextPoints(width, height);
-            const numParticles = textPoints.length;
-
-            const geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(numParticles * 3);
-            const textPositions = new Float32Array(numParticles * 3);
-            const randomness = new Float32Array(numParticles);
-
-            for (let i = 0; i < numParticles; i++) {
-                positions.set([0, 0, 0], i * 3);
-                textPositions.set([textPoints[i].x, textPoints[i].y, 0], i * 3);
-                randomness[i] = Math.random();
-            }
-
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            geometry.setAttribute('aTextPosition', new THREE.BufferAttribute(textPositions, 3));
-            geometry.setAttribute('aRandomness', new THREE.BufferAttribute(randomness, 1));
-
-            const material = new THREE.ShaderMaterial({
-                vertexShader: ticketParticleVertexShader,
-                fragmentShader: ticketParticleFragmentShader,
-                uniforms: {
-                    uTime: { value: 0 },
-                    uHoverState: { value: 0.0 }
-                },
-                blending: THREE.AdditiveBlending,
-                transparent: true,
-                depthWrite: false
-            });
-
-            ticketParticles = new THREE.Points(geometry, material);
-            ticketParticleScene.add(ticketParticles);
-        }
-
-        function getTicketTextPoints(width, height) {
-            return new Promise(resolve => {
-                const tempCanvas = document.createElement('canvas');
-                const ctx = tempCanvas.getContext('2d');
-                tempCanvas.width = width;
-                tempCanvas.height = height;
-
-                const font = 'bold 24px "Inter", sans-serif';
-                ctx.font = font;
-                ctx.fillStyle = '#fff';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('TICKETS', width / 2, height / 2);
-
-                const imageData = ctx.getImageData(0, 0, width, height);
-                const points = [];
-                const density = 2; 
-                for (let y = 0; y < height; y += density) {
-                    for (let x = 0; x < width; x += density) {
-                        const alpha = imageData.data[(y * width + x) * 4 + 3];
-                        if (alpha > 128) {
-                            const worldX = (x / width - 0.5) * 3;
-                            const worldY = -(y / height - 0.5) * 1.5;
-                            points.push(new THREE.Vector3(worldX, worldY, 0));
-                        }
-                    }
-                }
-                resolve(points);
-            });
         }
 
         // OPTIMIZED SEXTANT CUBE - Fixed blow-out issue
@@ -1628,6 +1592,47 @@
             scene.add(particles);
         }
 
+        // ENHANCED MOBILE AUDIO EVENT HANDLERS
+        function setupAudioUnlockHandlers() {
+            if (!DEVICE_CAPABILITIES.isMobile) return;
+
+            const unlockEvents = ['touchstart', 'touchend', 'mousedown', 'click', 'keydown'];
+            let unlockAttempts = 0;
+            const maxUnlockAttempts = 5;
+
+            const attemptUnlock = async (event) => {
+                if (unlockAttempts >= maxUnlockAttempts) return;
+                unlockAttempts++;
+
+                try {
+                    const success = await unlockAudioContext();
+                    if (success) {
+                        console.log(`Audio unlocked on attempt ${unlockAttempts} via ${event.type}`);
+                        
+                        // Boost volume for mobile after successful unlock
+                        if (Tone.Master) {
+                            Tone.Master.volume.value = 10;
+                        }
+                        
+                        // Remove listeners after successful unlock
+                        unlockEvents.forEach(eventType => {
+                            document.removeEventListener(eventType, attemptUnlock);
+                        });
+                    }
+                } catch (error) {
+                    console.warn(`Audio unlock attempt ${unlockAttempts} failed:`, error);
+                }
+            };
+
+            // Add listeners for all unlock events
+            unlockEvents.forEach(eventType => {
+                document.addEventListener(eventType, attemptUnlock, { 
+                    passive: true, 
+                    once: false // Don't remove automatically, we'll manage this
+                });
+            });
+        }
+
         function setupEventListeners() {
             window.addEventListener('resize', debounce(onWindowResize, 250), false);
             
@@ -1636,27 +1641,29 @@
                 startOverlay.style.opacity = '0';
                 startOverlay.style.pointerEvents = 'none';
                 
-                // Enhanced mobile audio initialization
+                // COMPREHENSIVE MOBILE AUDIO INITIALIZATION
                 try {
-                    await Tone.start();
+                    // Initialize audio system first
+                    await initAudio();
                     
-                    if (Tone.context.state === 'suspended') {
-                        await Tone.context.resume();
-                    }
+                    // Setup ongoing unlock handlers for mobile
+                    setupAudioUnlockHandlers();
                     
+                    // Attempt initial unlock
                     if (DEVICE_CAPABILITIES.isMobile) {
-                        setTimeout(async () => {
-                            if (Tone.context.state === 'suspended') {
-                                await Tone.context.resume();
-                            }
-                        }, 100);
-                        
-                        setTimeout(() => {
-                            Tone.Master.volume.value = 8;
-                        }, 200);
+                        const unlocked = await unlockAudioContext();
+                        if (unlocked) {
+                            console.log('Audio successfully unlocked on initialization');
+                        } else {
+                            console.log('Audio will unlock on next user interaction');
+                        }
                     }
                     
-                    initAudio();
+                    // Start Tone.js transport after successful initialization
+                    if (audioInitialized) {
+                        await Tone.start();
+                    }
+                    
                     runOpeningSequence();
                     document.getElementById('mute-button').classList.add('visible');
                     
@@ -1667,22 +1674,6 @@
                 }
             }, { once: true });
 
-            // Enhanced mobile audio unlock
-            if (DEVICE_CAPABILITIES.isMobile) {
-                ['touchstart', 'touchend', 'click', 'tap'].forEach(eventType => {
-                    document.addEventListener(eventType, async () => {
-                        if (audioInitialized && Tone.context.state === 'suspended') {
-                            try {
-                                await Tone.context.resume();
-                                Tone.Master.volume.value = 8;
-                            } catch (e) {
-                                console.warn('Audio context resume failed:', e);
-                            }
-                        }
-                    }, { passive: true, once: true });
-                });
-            }
-
             const muteButton = document.getElementById('mute-button');
             muteButton.addEventListener('click', () => {
                 if (!audioInitialized) return;
@@ -1692,7 +1683,6 @@
 
             const passwordForm = document.getElementById('password-form');
             const passwordInput = document.getElementById('password-input');
-            const ticketContainer = document.getElementById('ticket-particle-button');
 
             passwordForm.addEventListener('submit', (e) => {
                 e.preventDefault();
@@ -1700,13 +1690,6 @@
             });
 
             passwordInput.addEventListener('input', handleTyping);
-            
-            ticketContainer.addEventListener('mouseenter', () => {
-                if(ticketParticles) gsap.to(ticketParticles.material.uniforms.uHoverState, { value: 1.0, duration: 0.5, ease: "power2.out" });
-            });
-            ticketContainer.addEventListener('mouseleave', () => {
-                if(ticketParticles) gsap.to(ticketParticles.material.uniforms.uHoverState, { value: 0.0, duration: 0.5, ease: "power2.inOut" });
-            });
 
             window.addEventListener('keydown', handleKeyDown);
             window.addEventListener('keyup', handleKeyUp);
@@ -2127,23 +2110,6 @@
             if(particleComposer) {
                 particleComposer.setSize(width, height);
             }
-            
-            if (ticketParticleCamera) {
-                const ticketCanvas = document.getElementById('ticket-particle-canvas');
-                if (ticketCanvas) {
-                    const container = ticketCanvas.parentElement;
-                    const newWidth = container.clientWidth;
-                    const newHeight = container.clientHeight;
-
-                    if (newWidth > 0 && newHeight > 0) {
-                        ticketParticleCamera.aspect = newWidth / newHeight;
-                        ticketParticleCamera.updateProjectionMatrix();
-                        if(ticketParticleRenderer) {
-                           ticketParticleRenderer.setSize(newWidth, newHeight);
-                        }
-                    }
-                }
-            }
         }
 
         // -- OPTIMIZED ANIMATION LOOP
@@ -2179,11 +2145,6 @@
                     particleCamera.position.z = 2 + Math.sin(elapsedTime * 0.1) * 0.2;
                 }
                 particleComposer.render();
-            }
-
-            if (ticketParticles) {
-                ticketParticles.material.uniforms.uTime.value = elapsedTime;
-                ticketParticleRenderer.render(ticketParticleScene, ticketParticleCamera);
             }
 
             if (sextantCube && activeScene === 'secret') {
