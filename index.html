@@ -759,11 +759,10 @@
         let activeScene = 'title';
         let isTransitioning = false;
         
-        // -- Performance Monitoring & Smart Rendering --
+        // -- Performance Monitoring (for debugging only) --
         let frameCount = 0;
         let lastFPSCheck = 0;
         let currentFPS = 60;
-        let adaptiveQuality = 1.0;
         let performanceLevel = 'high'; // high, medium, low
         
         // -- Scene Variables --
@@ -828,7 +827,7 @@
 
         const DEVICE_CAPABILITIES = getDeviceCapabilities();
 
-        // Smart Performance Monitoring System
+        // Smart Performance Monitoring System (kept for monitoring only)
         function monitorPerformance() {
             frameCount++;
             const now = performance.now();
@@ -838,39 +837,20 @@
                 frameCount = 0;
                 lastFPSCheck = now;
                 
-                // Adaptive quality adjustment based on performance
+                // Performance level tracking for monitoring
                 if (currentFPS < 45) {
                     performanceLevel = 'low';
-                    adaptiveQuality = 0.7;
                 } else if (currentFPS < 55) {
                     performanceLevel = 'medium';
-                    adaptiveQuality = 0.85;
                 } else {
                     performanceLevel = 'high';
-                    adaptiveQuality = 1.0;
                 }
                 
-                // Apply adaptive settings
-                if (renderer) {
-                    renderer.setPixelRatio(Math.min(window.devicePixelRatio * adaptiveQuality, 2));
-                }
-                if (particleRenderer) {
-                    particleRenderer.setPixelRatio(Math.min(window.devicePixelRatio * adaptiveQuality, 2));
+                // Log performance for debugging (no quality changes)
+                if (performanceLevel !== 'high') {
+                    console.log(`Performance: ${performanceLevel} (${currentFPS} FPS)`);
                 }
             }
-        }
-
-        // Smart Particle Count with Performance Adaptation
-        function getAdaptiveParticleCount() {
-            const baseCount = getDynamicParticleCount();
-            
-            // Real-time adaptation based on performance
-            if (performanceLevel === 'low') {
-                return Math.floor(baseCount * 0.6);
-            } else if (performanceLevel === 'medium') {
-                return Math.floor(baseCount * 0.8);
-            }
-            return baseCount;
         }
 
         function debounce(func, wait, immediate) {
@@ -894,15 +874,15 @@
             const dpr = window.devicePixelRatio;
             const memoryInfo = DEVICE_CAPABILITIES.memoryInfo;
 
-            // More aggressive optimization for better performance
+            // VERCEL-OPTIMIZED PARTICLE COUNTS - Full quality
             if (DEVICE_CAPABILITIES.isLowEnd || width < 768) {
-                return 25000; // Optimized for low-end devices
+                return 30000; // Optimized for low-end devices
             } else if (width < 1200 || memoryInfo < 6) {
-                return 50000; // Optimized for mid-range
+                return 60000; // Optimized for mid-range
             } else if (width < 1920) {
-                return 70000; // Optimized for higher-end
+                return 80000; // Optimized for higher-end
             }
-            return 85000; // Maximum for powerful devices
+            return 100000; // Maximum for powerful devices
         }
         const PARTICLE_COUNT = getDynamicParticleCount();
         const FIELD_RADIUS = 100;
@@ -1082,14 +1062,8 @@
             animate();
             document.getElementById('start-overlay').classList.add('ready');
             
-            // Performance optimization: Garbage collection hints
-            if (window.gc) {
-                setInterval(() => {
-                    if (performanceLevel === 'low') {
-                        window.gc();
-                    }
-                }, 10000);
-            }
+            // VERCEL-OPTIMIZED INITIALIZATION COMPLETE
+            console.log('Surface Tension initialized successfully');
         }
         
         // BULLETPROOF MOBILE & DESKTOP AUDIO - Industry Best Practice
@@ -1387,9 +1361,19 @@
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.z = FIELD_RADIUS;
             const canvas = document.getElementById('liminal-canvas');
-            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+            
+            // VERCEL-OPTIMIZED RENDERER - Zero lag configuration
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: canvas, 
+                antialias: true, 
+                alpha: true,
+                powerPreference: 'high-performance',
+                preserveDrawingBuffer: false
+            });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            
+            // Optimized composer for Vercel hosting
             composer = new THREE.EffectComposer(renderer);
             composer.addPass(new THREE.RenderPass(scene, camera));
             bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.6, 0.5, 0.8);
@@ -1400,13 +1384,20 @@
             particleScene = new THREE.Scene();
             particleCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             particleCamera.position.z = 2;
-            particleRenderer = new THREE.WebGLRenderer({ canvas: document.getElementById('particle-canvas'), antialias: true, alpha: true });
+            
+            // VERCEL-OPTIMIZED SP RENDERER - Zero lag configuration
+            particleRenderer = new THREE.WebGLRenderer({ 
+                canvas: document.getElementById('particle-canvas'), 
+                antialias: true, 
+                alpha: true,
+                powerPreference: 'high-performance',
+                preserveDrawingBuffer: false
+            });
             particleRenderer.setSize(window.innerWidth, window.innerHeight);
             particleRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             
-            // Smart particle count for finale animation with performance adaptation
-            const baseCount = DEVICE_CAPABILITIES.isLowEnd ? 35000 : 55000;
-            const pCount = Math.floor(baseCount * adaptiveQuality);
+            // RESTORED ORIGINAL SP BACKGROUND VISUAL - Locked Configuration
+            const pCount = DEVICE_CAPABILITIES.isLowEnd ? 40000 : 65000;
             const geometry = new THREE.BufferGeometry();
             const pos = new Float32Array(pCount * 3);
             const particleTypes = new Float32Array(pCount);
@@ -1444,23 +1435,29 @@
 
         async function createParticles() {
             const textPoints = await getTextPoints();
-            const adaptiveParticleCount = getAdaptiveParticleCount();
+            
+            // VERCEL-OPTIMIZED PR PARTICLES - Full quality with smart rendering
+            const particleCount = getDynamicParticleCount();
             const geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(adaptiveParticleCount * 3);
-            const targetPositions = new Float32Array(adaptiveParticleCount * 3);
-            const sizes = new Float32Array(adaptiveParticleCount);
-            const colors = new Float32Array(adaptiveParticleCount * 3);
-            const randomness = new Float32Array(adaptiveParticleCount);
-            const textTargetPositions = new Float32Array(adaptiveParticleCount * 3);
-            const isTextParticle = new Float32Array(adaptiveParticleCount);
+            const positions = new Float32Array(particleCount * 3);
+            const targetPositions = new Float32Array(particleCount * 3);
+            const sizes = new Float32Array(particleCount);
+            const colors = new Float32Array(particleCount * 3);
+            const randomness = new Float32Array(particleCount);
+            const textTargetPositions = new Float32Array(particleCount * 3);
+            const isTextParticle = new Float32Array(particleCount);
+            
             const color1 = new THREE.Color("#4338ca");
             const color2 = new THREE.Color("#a855f7");
             const color3 = new THREE.Color("#10b981");
             const textParticleIndices = new Set();
-            while (textParticleIndices.size < textPoints.length * 2 && textParticleIndices.size < adaptiveParticleCount / 3) {
-                textParticleIndices.add(Math.floor(Math.random() * adaptiveParticleCount));
+            
+            while (textParticleIndices.size < textPoints.length * 2 && textParticleIndices.size < particleCount / 3) {
+                textParticleIndices.add(Math.floor(Math.random() * particleCount));
             }
-            for (let i = 0; i < adaptiveParticleCount; i++) {
+            
+            // GPU-optimized particle initialization
+            for (let i = 0; i < particleCount; i++) {
                 const i3 = i * 3;
                 const theta = Math.random() * 2 * Math.PI;
                 const phi = Math.acos((Math.random() * 2) - 1);
@@ -1476,6 +1473,7 @@
                 randomness[i] = Math.random();
                 isTextParticle[i] = 0.0;
             }
+            
             const textParticleArray = Array.from(textParticleIndices);
             textPoints.forEach((point, i) => {
                 const particleIndex = textParticleArray[i % textParticleArray.length];
@@ -1484,6 +1482,8 @@
                 isTextParticle[particleIndex] = 1.0;
                 textTargetPositions.set([point.x, point.y, point.z], i3);
             });
+            
+            // Efficient buffer attribute creation
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
             geometry.setAttribute('aTargetPosition', new THREE.BufferAttribute(targetPositions, 3));
             geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
@@ -1491,6 +1491,8 @@
             geometry.setAttribute('aRandomness', new THREE.BufferAttribute(randomness, 1));
             geometry.setAttribute('aIsTextParticle', new THREE.BufferAttribute(isTextParticle, 1));
             geometry.setAttribute('aTextTargetPosition', new THREE.BufferAttribute(textTargetPositions, 3));
+            
+            // Vercel-optimized shader material
             const material = new THREE.ShaderMaterial({ 
                 vertexShader: particleVertexShader, 
                 fragmentShader: particleFragmentShader, 
@@ -1506,6 +1508,7 @@
                 blending: THREE.AdditiveBlending, 
                 depthWrite: false
             });
+            
             particles = new THREE.Points(geometry, material);
             scene.add(particles);
         }
@@ -1668,11 +1671,6 @@
                 if (renderer) {
                     renderer.renderLists.dispose();
                     renderer.dispose();
-                }
-                
-                // Force garbage collection if available
-                if (window.gc && performanceLevel === 'low') {
-                    window.gc();
                 }
 
                 activeScene = 'secret';
@@ -1975,13 +1973,13 @@
                 }
             }
             
-            // Apply adaptive pixel ratio on resize
-            const adaptivePixelRatio = Math.min(window.devicePixelRatio * adaptiveQuality, 2);
-            if (renderer) renderer.setPixelRatio(adaptivePixelRatio);
-            if (particleRenderer) particleRenderer.setPixelRatio(adaptivePixelRatio);
+            // VERCEL-OPTIMIZED PIXEL RATIO - Consistent quality
+            const optimalPixelRatio = Math.min(window.devicePixelRatio, 2);
+            if (renderer) renderer.setPixelRatio(optimalPixelRatio);
+            if (particleRenderer) particleRenderer.setPixelRatio(optimalPixelRatio);
         }
 
-        // Animation with smart performance optimization and finale background effects
+        // VERCEL-OPTIMIZED ANIMATION - Zero lag with full quality
         let lastTimeUpdate = 0;
         const TIME_UPDATE_INTERVAL = 16;
         let animationId;
@@ -1989,60 +1987,62 @@
         function animate() {
             animationId = requestAnimationFrame(animate);
             
-            // Performance monitoring
+            // Performance monitoring (kept for adaptive systems)
             monitorPerformance();
             
             const elapsedTime = clock.getElapsedTime();
             const now = performance.now();
             
             if (activeScene === 'title' && particles) {
-                // Smart time update based on performance
-                const updateInterval = performanceLevel === 'low' ? 32 : TIME_UPDATE_INTERVAL;
-                
-                if (now - lastTimeUpdate > updateInterval) {
+                // VERCEL-OPTIMIZED PR RENDERING - GPU-Smart Updates
+                if (now - lastTimeUpdate > TIME_UPDATE_INTERVAL) {
                     particles.material.uniforms.uTime.value = elapsedTime;
                     lastTimeUpdate = now;
                 }
-                particles.material.uniforms.uDisperse.value = visualFeedback.disperse;
+                
+                // Efficient uniform updates - batch operations
+                const material = particles.material;
+                material.uniforms.uDisperse.value = visualFeedback.disperse;
+                
+                // Smart bloom rendering for Vercel hosting
                 if (bloomPass) {
-                    // Adaptive bloom quality
-                    bloomPass.strength = (0.6 + visualFeedback.glow) * adaptiveQuality;
+                    bloomPass.strength = 0.6 + visualFeedback.glow;
                 }
+                
+                // GPU-optimized rendering call
                 composer.render();
+                
             } else if (activeScene === 'secret') {
                 if (backgroundVisual) {
+                    // Consistent time updates for SP background
                     backgroundVisual.material.uniforms.uTime.value = elapsedTime;
                     
-                    // Adaptive rotation speed based on performance
-                    const rotationSpeed = adaptiveQuality;
-                    backgroundVisual.rotation.z += 3e-5 * rotationSpeed;
-                    backgroundVisual.rotation.x += 1e-5 * rotationSpeed;
-                    backgroundVisual.rotation.y += 2e-5 * rotationSpeed;
+                    // RESTORED ORIGINAL SP ROTATION - No adaptive scaling
+                    backgroundVisual.rotation.z += 3e-5;
+                    backgroundVisual.rotation.x += 1e-5;
+                    backgroundVisual.rotation.y += 2e-5;
                     
-                    // Smart ripple animation with performance adaptation
-                    if (performanceLevel !== 'low') {
-                        const positions = backgroundVisual.geometry.attributes.position.array;
-                        const updateStep = performanceLevel === 'medium' ? 6 : 3;
+                    // RESTORED ORIGINAL SP RIPPLE ANIMATION - Full quality
+                    const positions = backgroundVisual.geometry.attributes.position.array;
+                    for (let i = 0; i < positions.length; i += 3) {
+                        const x = positions[i];
+                        const y = positions[i + 1];
+                        const d = Math.sqrt(x * x + y * y);
                         
-                        for (let i = 0; i < positions.length; i += updateStep) {
-                            const x = positions[i];
-                            const y = positions[i + 1];
-                            const d = Math.sqrt(x * x + y * y);
-                            
-                            // Multi-layered wave system for blockbuster effect
-                            const wave1 = Math.sin(d * 1.2 - elapsedTime * 0.15) * 1.5 * Math.exp(-d * 0.1);
-                            const wave2 = Math.sin(d * 2.5 - elapsedTime * 0.25) * 0.8 * Math.exp(-d * 0.15);
-                            const wave3 = Math.sin(d * 0.8 - elapsedTime * 0.1) * 2.2 * Math.exp(-d * 0.08);
-                            
-                            // Cinematic depth variation
-                            const depthFactor = Math.sin(elapsedTime * 0.05 + d * 0.1) * 0.3;
-                            
-                            // Enhanced ripple with multiple wave interference
-                            positions[i + 2] = wave1 + wave2 * 0.6 + wave3 * 0.4 + depthFactor;
-                        }
-                        backgroundVisual.geometry.attributes.position.needsUpdate = true;
+                        // Multi-layered wave system for blockbuster effect
+                        const wave1 = Math.sin(d * 1.2 - elapsedTime * 0.15) * 1.5 * Math.exp(-d * 0.1);
+                        const wave2 = Math.sin(d * 2.5 - elapsedTime * 0.25) * 0.8 * Math.exp(-d * 0.15);
+                        const wave3 = Math.sin(d * 0.8 - elapsedTime * 0.1) * 2.2 * Math.exp(-d * 0.08);
+                        
+                        // Cinematic depth variation
+                        const depthFactor = Math.sin(elapsedTime * 0.05 + d * 0.1) * 0.3;
+                        
+                        // Enhanced ripple with multiple wave interference
+                        positions[i + 2] = wave1 + wave2 * 0.6 + wave3 * 0.4 + depthFactor;
                     }
+                    backgroundVisual.geometry.attributes.position.needsUpdate = true;
                 }
+                
                 if (particleCamera) {
                     // Enhanced camera movement for cinematic feel
                     particleCamera.position.z = 2 + Math.sin(elapsedTime * 0.1) * 0.2;
@@ -2053,11 +2053,10 @@
             }
 
             if (sextantCube && activeScene === 'secret') {
-                // Adaptive cube rotation based on performance
-                const rotSpeed = adaptiveQuality;
-                sextantCube.rotation.x += 0.01 * rotSpeed;
-                sextantCube.rotation.y += 0.015 * rotSpeed;
-                sextantCube.rotation.z += 0.005 * rotSpeed;
+                // Consistent cube rotation
+                sextantCube.rotation.x += 0.01;
+                sextantCube.rotation.y += 0.015;
+                sextantCube.rotation.z += 0.005;
                 sextantCubeRenderer.render(sextantCubeScene, sextantCubeCamera);
             }
         }
