@@ -18,34 +18,37 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
-        .canvas-container {
+        .canvas-container, .overlay-container {
             position: fixed;
+            width: 100%;
+            height: 100%;
+            transition: opacity 1.5s ease-in-out;
+        }
+        
+        .canvas-container {
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
             z-index: 1;
-            transition: opacity 1.5s ease-in-out;
         }
+        
         .canvas-container.hidden {
             opacity: 0;
             pointer-events: none;
         }
+        
         .overlay-container {
-            position: fixed;
             z-index: 2;
             color: white;
             text-align: center;
-            width: 100%;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100%;
             padding: 0 5vw;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 1.5s ease-in-out;
         }
         .overlay-container.visible {
             opacity: 1;
@@ -302,6 +305,13 @@
         
         .subheading-rave {
             color: #a855f7;
+            text-decoration: none;
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+        
+        .subheading-rave:hover {
+            color: #c084fc;
+            text-shadow: 0 0 15px rgba(168, 85, 247, 0.6);
         }
         
         #ticket-particle-button {
@@ -497,7 +507,7 @@
                 <button type="submit" id="submit-button">&rarr;</button>
             </form>
             <div id="hint-container">
-                <div id="hint-tooltip">The answer lies at the threshold of perception. Seek it in the digital ether, or ask a guide at the physical nexus.</div>
+                <div id="hint-tooltip">The threshold exists where coffee meets consciousness—seek wisdom from the keepers of any Sextant Coffee sanctuary, or let the digital oracle reveal what lies between worlds.</div>
                 <div id="hint-icon">?</div>
             </div>
         </div>
@@ -509,7 +519,7 @@
             <span class="event-date-text" id="event-date-right"></span>
         </div>
         <h1 id="animated-text"></h1>
-        <p id="subtext"><span id="flicker-text">Digital Drip</span> : <span class="subheading-rave">An After-Hours Art Rave</span></p>
+        <p id="subtext"><span id="flicker-text">Digital Drip</span> : <a href="https://www.eventbrite.com/e/surface-tension-digital-drip-an-after-hours-art-rave-tickets-1471279469499?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl" target="_blank" rel="noopener noreferrer" class="subheading-rave">An After-Hours Art Rave</a></p>
         
         <a id="ticket-particle-button" href="https://www.eventbrite.com/e/surface-tension-digital-drip-an-after-hours-art-rave-tickets-1471279469499?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl" target="_blank" rel="noopener noreferrer" aria-label="Purchase Tickets">
             <canvas id="ticket-particle-canvas"></canvas>
@@ -611,9 +621,11 @@
             return capabilities;
         }
 
+        const DEVICE_CAPABILITIES = getDeviceCapabilities();
+
         // -- OPTIMIZATION: Adaptive particle count and quality
         function getOptimalSettings() {
-            const capabilities = getDeviceCapabilities();
+            const capabilities = DEVICE_CAPABILITIES;
             
             if (capabilities.isLowEnd) {
                 return {
@@ -813,28 +825,59 @@
         const backgroundVertexShader = `
             uniform float uTime;
             attribute float aParticleType; 
+            attribute float aEnsoPosition; // Position along the enso circle (0-1)
+            attribute float aBrushIntensity; // Brush stroke intensity
             varying float vAlpha; 
             varying float vParticleType;
             varying vec3 vColor;
+            varying float vBrushIntensity;
 
             void main() {
-                vParticleType = aParticleType; 
-                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                vParticleType = aParticleType;
+                vBrushIntensity = aBrushIntensity;
                 
-                float rippleTime = uTime * 0.15;
-                float dist = length(position.xy);
-                float ripple = sin(dist * 1.2 - rippleTime) * 1.5 * exp(-dist * 0.1);
-                mvPosition.z += ripple;
-
-                float flash = smoothstep(0.9, 1.0, sin(dist * 1.2 - rippleTime + 1.57));
-                vec3 flashColor = vec3(0.06, 0.71, 0.51); // Emerald
-                vec3 baseColor = mix(vec3(1.0, 1.0, 1.0), vec3(0.6, 0.65, 0.75), aParticleType);
-                vColor = mix(baseColor, flashColor, flash);
+                // Create enso circle with organic imperfections
+                float angle = aEnsoPosition * 6.28318; // 2PI
+                float radius = 15.0 + sin(aEnsoPosition * 12.0) * 1.5; // Organic radius variation
                 
-                float zFactor = 1.0 - clamp(abs(mvPosition.z / 20.0), 0.0, 1.0);
-                float pSize = (zFactor * zFactor) * 2.0 + 0.5;
-                gl_PointSize = pSize; 
-                vAlpha = zFactor;
+                // Enso gap (traditional zen circle opening)
+                float gapStart = 5.5;
+                float gapEnd = 6.28318;
+                float gapFade = smoothstep(gapStart - 0.3, gapStart, angle) * (1.0 - smoothstep(gapEnd - 0.3, gapEnd, angle));
+                
+                // Rotation with time
+                float rotationSpeed = uTime * 0.08;
+                float rotatedAngle = angle + rotationSpeed;
+                
+                vec3 ensoPos = vec3(
+                    cos(rotatedAngle) * radius,
+                    sin(rotatedAngle) * radius,
+                    sin(aEnsoPosition * 8.0 + uTime) * 0.8
+                );
+                
+                // Add brush stroke texture displacement
+                float brushNoise = sin(aEnsoPosition * 25.0 + uTime * 2.0) * aBrushIntensity * 0.5;
+                ensoPos.xy += normalize(ensoPos.xy) * brushNoise;
+                
+                vec4 mvPosition = modelViewMatrix * vec4(ensoPos, 1.0);
+                
+                // Dynamic coloring based on position and time
+                float colorPhase = aEnsoPosition + uTime * 0.3;
+                vec3 color1 = vec3(0.02, 0.5, 0.4);   // Deep teal
+                vec3 color2 = vec3(0.1, 0.8, 0.6);    // Bright emerald
+                vec3 color3 = vec3(0.9, 0.95, 1.0);   // Ethereal white
+                
+                vec3 baseColor = mix(color1, color2, sin(colorPhase) * 0.5 + 0.5);
+                vColor = mix(baseColor, color3, aBrushIntensity * gapFade);
+                
+                // Size based on brush intensity and distance
+                float baseSize = 2.0 + aBrushIntensity * 3.0;
+                float distanceScale = 120.0 / -mvPosition.z;
+                gl_PointSize = baseSize * distanceScale * gapFade;
+                
+                // Alpha based on gap fade and brush intensity
+                vAlpha = gapFade * (0.7 + aBrushIntensity * 0.3);
+                
                 gl_Position = projectionMatrix * mvPosition;
             }
         `;
@@ -842,10 +885,30 @@
         const backgroundFragmentShader = `
             varying float vAlpha; 
             varying vec3 vColor;
+            varying float vBrushIntensity;
+            
             void main() {
-                float dist = distance(gl_PointCoord, vec2(0.5)); 
-                if (dist > 0.5) discard;
-                float strength = 1.0 - dist * 2.0;
+                vec2 center = gl_PointCoord - vec2(0.5);
+                float dist = length(center);
+                
+                // Create brush stroke texture
+                float brushTexture = 1.0 - smoothstep(0.0, 0.5, dist);
+                
+                // Add organic edge variation
+                float angle = atan(center.y, center.x);
+                float edgeVariation = sin(angle * 8.0) * 0.1 + sin(angle * 16.0) * 0.05;
+                float organicRadius = 0.5 + edgeVariation * vBrushIntensity;
+                
+                if (dist > organicRadius) discard;
+                
+                // Soft falloff with brush characteristics
+                float strength = 1.0 - smoothstep(0.0, organicRadius, dist);
+                strength *= brushTexture;
+                
+                // Add inner glow for mystical effect
+                float innerGlow = exp(-dist * 4.0) * 0.3;
+                strength += innerGlow;
+                
                 gl_FragColor = vec4(vColor, strength * vAlpha);
             }
         `;
@@ -960,24 +1023,27 @@
         function initAudio() {
             if (audioInitialized) return;
 
+            // Mobile volume boost - mobile speakers need higher levels
+            const mobileVolumeBoost = DEVICE_CAPABILITIES.isMobile ? 8 : 0;
+
             // Master effects chain
             masterReverb = new Tone.Reverb(4).toDestination();
             masterReverb.wet.value = 0.6;
             masterChorus = new Tone.Chorus(2, 2.5, 0.7).connect(masterReverb);
 
-            // Drone synth (unchanged)
+            // Drone synth with mobile volume adjustment
             droneSynth = new Tone.FMSynth({
-                volume: -24,
+                volume: -24 + mobileVolumeBoost,
                 harmonicity: 0.5,
                 modulationIndex: 10,
                 envelope: { attack: 4, decay: 0.1, sustain: 1, release: 4 },
                 modulationEnvelope: { attack: 4, decay: 0.1, sustain: 1, release: 4 }
             }).connect(masterChorus);
 
-            // Arpeggiator with filter (unchanged)
+            // Arpeggiator with filter and mobile volume boost
             const arpFilter = new Tone.AutoFilter("8n").start();
             const arpSynth = new Tone.MonoSynth({
-                volume: -12,
+                volume: -12 + mobileVolumeBoost,
                 oscillator: { type: "sawtooth" },
                 filter: { Q: 2, type: "lowpass", rolloff: -24 },
                 envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.1 }
@@ -987,25 +1053,25 @@
             }, ["C2", "Eb2", "G2", "Bb2"], "up");
             arp.interval = "16n";
 
-            // Pad synth (unchanged)
+            // Pad synth with mobile volume boost
             padFilter = new Tone.Filter(400, "lowpass").connect(masterChorus);
             padSynth = new Tone.PolySynth(Tone.FMSynth, {
-                volume: -18,
+                volume: -18 + mobileVolumeBoost,
                 harmonicity: 1.5,
                 modulationIndex: 5,
                 envelope: { attack: 3, decay: 0.5, sustain: 1, release: 5 }
             }).connect(padFilter);
 
-            // Noise synth (unchanged)
+            // Noise synth with mobile volume boost
             disintegrateNoise = new Tone.NoiseSynth({
-                volume: -20,
+                volume: -20 + mobileVolumeBoost,
                 noise: { type: 'white' },
                 envelope: { attack: 0.01, decay: 1.5, sustain: 0 }
             }).connect(masterReverb);
 
-            // Climax chime (unchanged)
+            // Climax chime with mobile volume boost
             climaxChime = new Tone.MetalSynth({
-                volume: -10,
+                volume: -10 + mobileVolumeBoost,
                 frequency: 300,
                 envelope: { attack: 0.001, decay: 1.4, release: 0.2 },
                 harmonicity: 5.1,
@@ -1014,7 +1080,7 @@
                 octaves: 1.5
             }).connect(masterReverb);
 
-            // **NEW: Kavinsky-style cinematic lead synth**
+            // **NEW: Kavinsky-style cinematic lead synth with mobile volume boost**
             const cinematicDelay = new Tone.FeedbackDelay("8n", 0.4).connect(masterChorus);
             cinematicDelay.wet.value = 0.7;
             
@@ -1032,7 +1098,7 @@
             }).connect(cinematicChorus);
 
             cinematicLead = new Tone.DuoSynth({
-                volume: -20, // Subtle but present
+                volume: -20 + mobileVolumeBoost, // Boosted for mobile
                 vibratoAmount: 0.2,
                 vibratoRate: 4,
                 harmonicity: 1.5,
@@ -1072,6 +1138,17 @@
                 }
             }).connect(cinematicFilter);
 
+            // Mobile-specific audio context setup
+            if (DEVICE_CAPABILITIES.isMobile) {
+                // Ensure audio context is properly resumed on mobile
+                if (Tone.context.state === 'suspended') {
+                    Tone.context.resume();
+                }
+                
+                // Set master volume higher for mobile
+                Tone.Master.volume.value = -3; // Boost overall volume on mobile
+            }
+
             audioInitialized = true;
         }
 
@@ -1079,24 +1156,47 @@
             return new Promise((resolve) => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                const canvasSize = 2048;
+                
+                // Make canvas size responsive to viewport with safety margins
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                const isMobile = viewportWidth < 768;
+                
+                // Calculate optimal canvas size based on viewport
+                const canvasSize = isMobile ? Math.min(1536, viewportWidth * 2) : Math.min(2048, viewportWidth * 1.5);
+                const fontSize = isMobile ? Math.max(120, canvasSize * 0.08) : Math.max(160, canvasSize * 0.08);
+                
+                // Adjust scaling to ensure text fits within camera view with safety margins
+                const baseScaling = isMobile ? 0.05 : 0.065;
+                const viewportScaling = Math.min(baseScaling, (viewportWidth * 0.8) / (canvasSize * 0.8));
+                
                 canvas.width = canvasSize;
                 canvas.height = canvasSize;
-                ctx.font = '200px "ivypresto-display"';
+                ctx.font = `${fontSize}px "ivypresto-display"`;
                 ctx.fillStyle = '#fff';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(TITLE_TEXT, canvasSize / 2, canvasSize / 2);
+                
                 const imageData = ctx.getImageData(0, 0, canvasSize, canvasSize);
                 const points = [];
-                const density = 4;
+                const density = isMobile ? 3 : 4;
+                
                 for (let y = 0; y < canvasSize; y += density) {
                     for (let x = 0; x < canvasSize; x += density) {
                         const alpha = imageData.data[(y * canvasSize + x) * 4 + 3];
                         if (alpha > 128) {
-                            const worldX = (x - canvasSize / 2) * 0.08;
-                            const worldY = -(y - canvasSize / 2) * 0.08;
-                            points.push(new THREE.Vector3(worldX, worldY, 0));
+                            const worldX = (x - canvasSize / 2) * viewportScaling;
+                            const worldY = -(y - canvasSize / 2) * viewportScaling;
+                            
+                            // Add viewport boundary check with safety margin
+                            const safetyMargin = 20;
+                            const maxX = (viewportWidth / 2) - safetyMargin;
+                            const maxY = (viewportHeight / 2) - safetyMargin;
+                            
+                            if (Math.abs(worldX) < maxX && Math.abs(worldY) < maxY) {
+                                points.push(new THREE.Vector3(worldX, worldY, 0));
+                            }
                         }
                     }
                 }
@@ -1126,27 +1226,53 @@
             particleRenderer.setSize(window.innerWidth, window.innerHeight);
             particleRenderer.setPixelRatio(OPTIMAL_SETTINGS.pixelRatio);
             
+            // Create sophisticated enso particle system
             const pCount = OPTIMAL_SETTINGS.backgroundParticleCount;
             const geometry = new THREE.BufferGeometry();
             const pos = new Float32Array(pCount * 3);
-            const particleTypes = new Float32Array(pCount); 
+            const particleTypes = new Float32Array(pCount);
+            const ensoPositions = new Float32Array(pCount);
+            const brushIntensities = new Float32Array(pCount);
+            
             for (let i = 0; i < pCount; i++) {
-                const i3 = i * 3; const r = Math.random() * 30; const a = Math.random() * Math.PI * 2;
-                pos[i3] = r * Math.cos(a); pos[i3 + 1] = r * Math.sin(a); pos[i3 + 2] = (Math.random() - .5) * 12;
-                particleTypes[i] = Math.random() < 0.2 ? 1.0 : 0.0;
+                const i3 = i * 3;
+                
+                // Distribute particles along enso circle with clustered brush strokes
+                const ensoPos = (i / pCount) * 2 * Math.PI;
+                const brushCluster = Math.random() < 0.7 ? 1.0 : 0.3; // 70% dense brush strokes
+                const radiusVariation = (Math.random() - 0.5) * 2.0 * brushCluster;
+                
+                // Base enso circle position
+                const radius = 15 + radiusVariation;
+                pos[i3] = Math.cos(ensoPos) * radius;
+                pos[i3 + 1] = Math.sin(ensoPos) * radius;
+                pos[i3 + 2] = (Math.random() - 0.5) * 3.0;
+                
+                particleTypes[i] = Math.random() < 0.8 ? 1.0 : 0.0; // 80% primary particles
+                ensoPositions[i] = ensoPos / (2 * Math.PI); // Normalized 0-1
+                brushIntensities[i] = Math.pow(Math.random(), 0.6) * brushCluster; // Weighted toward higher intensity
             }
+            
             geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
             geometry.setAttribute('aParticleType', new THREE.BufferAttribute(particleTypes, 1));
+            geometry.setAttribute('aEnsoPosition', new THREE.BufferAttribute(ensoPositions, 1));
+            geometry.setAttribute('aBrushIntensity', new THREE.BufferAttribute(brushIntensities, 1));
+            
             const material = new THREE.ShaderMaterial({
-                vertexShader: backgroundVertexShader, fragmentShader: backgroundFragmentShader,
+                vertexShader: backgroundVertexShader, 
+                fragmentShader: backgroundFragmentShader,
                 uniforms: { uTime: { value: 0 } },
-                blending: THREE.AdditiveBlending, transparent: true, depthWrite: false
+                blending: THREE.AdditiveBlending, 
+                transparent: true, 
+                depthWrite: false
             });
+            
             backgroundVisual = new THREE.Points(geometry, material);
             particleScene.add(backgroundVisual);
+            
             particleComposer = new THREE.EffectComposer(particleRenderer);
             particleComposer.addPass(new THREE.RenderPass(particleScene, particleCamera));
-            const secretBloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.3, 0.5, 0.1);
+            const secretBloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.5, 0.1);
             particleComposer.addPass(secretBloomPass);
         }
 
@@ -1397,30 +1523,123 @@
             
             gsap.killTweensOf(riddleOverlay);
 
+            // **HOLLYWOOD-LEVEL CINEMATIC TRANSITION**
+            const cinematicTimeline = gsap.timeline();
+
+            // Stage 1: Dramatic particle explosion and visual feedback
+            if (particles) {
+                cinematicTimeline.to(particles.material.uniforms.uDisperse, {
+                    value: 15.0,
+                    duration: 0.8,
+                    ease: "power3.out"
+                }, 0);
+
+                cinematicTimeline.to(visualFeedback, {
+                    glow: 3.0,
+                    duration: 0.5,
+                    ease: "power2.out"
+                }, 0);
+            }
+
+            // Stage 2: Cinematic audio enhancement
             if (audioInitialized) {
+                // Dramatic climax chime for the unlock moment
+                climaxChime.triggerAttackRelease("G4", "2n", Tone.now() + 0.1);
+                
+                // Audio stinger and dramatic crescendo
+                const unlockStinger = new Tone.NoiseSynth({
+                    volume: -15,
+                    noise: { type: 'pink' },
+                    envelope: { attack: 0.005, decay: 0.3, sustain: 0 }
+                }).toDestination();
+                unlockStinger.triggerAttack(Tone.now() + 0.3);
+                
+                // Fade out existing audio dramatically
                 Tone.Transport.stop();
                 Tone.Transport.cancel();
-                droneSynth.volume.rampTo(-Infinity, 1);
-                padSynth.volume.rampTo(-Infinity, 1);
-                cinematicLead.volume.rampTo(-Infinity, 1);
+                droneSynth.volume.rampTo(-Infinity, 1.2);
+                padSynth.volume.rampTo(-Infinity, 1.2);
+                cinematicLead.volume.rampTo(-Infinity, 1.2);
                 arp.stop();
             }
-            document.getElementById('mute-button').classList.remove('visible');
 
-            gsap.to([riddleOverlay, canvasContainer], {
-                duration: 1.5, opacity: 0, ease: "power2.inOut",
+            // Stage 3: Camera/scale dramatic zoom effect
+            cinematicTimeline.to(camera, {
+                fov: 45,
+                duration: 1.0,
+                ease: "power2.inOut",
+                onUpdate: () => {
+                    camera.updateProjectionMatrix();
+                }
+            }, 0.3);
+
+            // Stage 4: Cinematic fade with particle burst
+            cinematicTimeline.to([riddleOverlay, canvasContainer], {
+                duration: 1.8,
+                opacity: 0,
+                scale: 1.1,
+                ease: "power3.inOut",
                 onComplete: () => {
                     if (riddleOverlay) riddleOverlay.classList.remove('visible');
                     if (canvasContainer) canvasContainer.classList.add('hidden');
                     activeScene = 'secret';
+                    
+                    // Reset camera FOV for next scene
+                    camera.fov = 75;
+                    camera.updateProjectionMatrix();
+                    
                     startTextAnimation();
                 }
-            });
+            }, 0.8);
 
-            if (particleCanvasContainer) particleCanvasContainer.classList.remove('hidden');
-            gsap.to(particleCanvasContainer, { duration: 1.5, opacity: 1, ease: "power2.inOut" });
-            if (animatedTextContainer) animatedTextContainer.classList.add('visible');
-            if (socialLinksContainer) socialLinksContainer.classList.add('visible');
+            // Stage 5: Dramatic reveal of new scene
+            if (particleCanvasContainer) {
+                particleCanvasContainer.classList.remove('hidden');
+                cinematicTimeline.fromTo(particleCanvasContainer, 
+                    { opacity: 0, scale: 0.8, filter: 'blur(10px)' },
+                    { 
+                        duration: 2.0, 
+                        opacity: 1, 
+                        scale: 1.0,
+                        filter: 'blur(0px)',
+                        ease: "power3.out" 
+                    }, 1.5);
+            }
+
+            // Stage 6: Text and social elements entrance
+            if (animatedTextContainer) {
+                animatedTextContainer.classList.add('visible');
+                cinematicTimeline.fromTo(animatedTextContainer, 
+                    { opacity: 0, y: 50, scale: 0.9 },
+                    { 
+                        duration: 1.5, 
+                        opacity: 1, 
+                        y: 0,
+                        scale: 1.0,
+                        ease: "back.out(1.7)" 
+                    }, 2.0);
+            }
+
+            if (socialLinksContainer) {
+                socialLinksContainer.classList.add('visible');
+                cinematicTimeline.fromTo(socialLinksContainer, 
+                    { opacity: 0, y: 30 },
+                    { 
+                        duration: 1.0, 
+                        opacity: 1, 
+                        y: 0,
+                        ease: "power2.out" 
+                    }, 2.5);
+            }
+
+            // Stage 7: Final dramatic bloom effect
+            cinematicTimeline.to(visualFeedback, {
+                glow: 0.0,
+                duration: 1.5,
+                ease: "power2.inOut"
+            }, 2.0);
+
+            document.getElementById('mute-button').classList.remove('visible');
         }
 
         function handleTyping(e) {
@@ -1686,11 +1905,11 @@
             } else if (activeScene === 'secret') {
                 if (backgroundVisual) {
                     backgroundVisual.material.uniforms.uTime.value = elapsedTime;
-                    backgroundVisual.rotation.z += 3e-5;
+                    // Enso rotation is handled in shader - no manual rotation needed
                 }
                 if (particleCamera) {
-                    particleCamera.position.z -= 0.003;
-                    if (particleCamera.position.z < -5) particleCamera.position.z = 2;
+                    // Subtle camera movement for depth
+                    particleCamera.position.z = 2 + Math.sin(elapsedTime * 0.1) * 0.2;
                 }
                 particleComposer.render();
             }
