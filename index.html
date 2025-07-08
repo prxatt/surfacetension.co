@@ -74,6 +74,7 @@
             padding: 1rem 2rem;
             border-radius: 8px;
             background: rgba(10, 10, 10, 0.5);
+            -webkit-backdrop-filter: blur(5px); /* Safari support */
             backdrop-filter: blur(5px);
             box-shadow: 0 0 25px rgba(255, 255, 255, 0.1);
             animation: pulse-glow 3s infinite;
@@ -218,6 +219,7 @@
             right: 0;
             width: 250px;
             background: rgba(10, 10, 10, 0.9);
+            -webkit-backdrop-filter: blur(5px); /* Safari support */
             backdrop-filter: blur(5px);
             border: 1px solid rgba(255,255,255,0.2);
             padding: 1rem;
@@ -394,6 +396,12 @@
         }
         
         /* Responsive adjustments */
+        @media (max-width: 480px) {
+            #animated-text {
+                font-size: clamp(2rem, 12vw, 4rem); /* Smaller font size for mobile */
+                letter-spacing: 0.05em;
+            }
+        }
         @media (max-height: 500px) {
             #animated-text-container {
                 padding-bottom: 60px; /* Less padding on short screens */
@@ -425,7 +433,7 @@
         </div>
     </div>
 
-    <button id="mute-button" class="unmuted">
+    <button id="mute-button" class="unmuted" aria-label="Mute or unmute audio">
         <svg id="unmuted-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /></svg>
         <svg id="muted-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /></svg>
     </button>
@@ -539,11 +547,11 @@
             const dpr = window.devicePixelRatio;
 
             if (width < 768 || dpr < 1.5) {
-                return 50000; // Mobile devices
+                return 40000; // Further reduced for mobile
             } else if (width < 1200) {
-                return 100000; // Tablets and small laptops
+                return 80000; // Tablets and small laptops
             }
-            return 200000; // High-end desktops
+            return 150000; // Reduced for most desktops for smoother experience
         }
         const PARTICLE_COUNT = getDynamicParticleCount();
         const FIELD_RADIUS = 100;
@@ -1122,8 +1130,11 @@
                 startOverlay.style.pointerEvents = 'none';
                 
                 // Start audio and visual sequence
+                // This is the most robust way to ensure audio works on mobile
                 Tone.start().then(() => {
-                    initAudio();
+                    if (!audioInitialized) {
+                        initAudio();
+                    }
                     runOpeningSequence();
                     document.getElementById('mute-button').classList.add('visible');
                 });
@@ -1220,20 +1231,34 @@
             }
             document.getElementById('mute-button').classList.remove('visible');
 
+            // OPTIMIZATION: Stagger the fade-out and fade-in to prevent lag
             gsap.to([riddleOverlay, canvasContainer], {
-                duration: 1.5, opacity: 0, ease: "power2.inOut",
+                duration: 1.0, // Faster fade out
+                opacity: 0, 
+                ease: "power2.in",
                 onComplete: () => {
+                    // Hide and dispose of the first scene
                     if (riddleOverlay) riddleOverlay.classList.remove('visible');
                     if (canvasContainer) canvasContainer.classList.add('hidden');
+                    if (particles) {
+                        particles.geometry.dispose();
+                        particles.material.dispose();
+                        scene.remove(particles);
+                    }
+                    if (renderer) {
+                        renderer.renderLists.dispose();
+                    }
+
                     activeScene = 'secret';
                     startTextAnimation();
+
+                    // Now, fade in the new scene
+                    if (particleCanvasContainer) particleCanvasContainer.classList.remove('hidden');
+                    gsap.to(particleCanvasContainer, { duration: 1.5, opacity: 1, ease: "power2.out" });
+                    if (animatedTextContainer) animatedTextContainer.classList.add('visible');
+                    if (socialLinksContainer) socialLinksContainer.classList.add('visible');
                 }
             });
-
-            if (particleCanvasContainer) particleCanvasContainer.classList.remove('hidden');
-            gsap.to(particleCanvasContainer, { duration: 1.5, opacity: 1, ease: "power2.inOut" });
-            if (animatedTextContainer) animatedTextContainer.classList.add('visible');
-            if (socialLinksContainer) socialLinksContainer.classList.add('visible');
         }
 
         function handleTyping(e) {
@@ -1354,7 +1379,6 @@
 
                 arp.start(audioStartTime);
                 
-                // MODIFIED: New evolving counter-melody for variation
                 const melodySequence = new Tone.Sequence((time, note) => {
                     counterMelody.triggerAttackRelease(note, '1n', time);
                 }, [null, 'G4', 'Eb4', null, 'F4', null, 'C4', null], '2n').start("7s"); // Delayed start
