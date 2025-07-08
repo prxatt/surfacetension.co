@@ -94,7 +94,6 @@
             100% { box-shadow: 0 0 25px rgba(255, 255, 255, 0.1); }
         }
 
-
         #mute-button {
             position: fixed;
             top: 1.5rem;
@@ -251,28 +250,34 @@
             justify-content: center;
             width: 90%;
             max-width: 1000px;
-            padding-bottom: 80px; /* Space for footer */
+            padding-bottom: 80px;
         }
         #event-date-container {
             display: flex;
             justify-content: space-between;
             width: 100%; 
-            margin-bottom: 0.5rem; 
+            margin-bottom: 2rem;
+            margin-top: -3.5rem;
         }
         .event-date-text {
             font-family: "ivypresto-display", serif;
             font-size: clamp(1.2rem, 2vw, 1.5rem);
-            color: rgba(255, 255, 255, 0.8);
+            color: #10b981;
+            background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             text-transform: uppercase;
+            font-weight: 500;
         }
         .event-date-text a {
             color: inherit;
             text-decoration: none;
-            transition: color 0.3s, text-shadow 0.3s;
+            transition: filter 0.3s, text-shadow 0.3s;
         }
         .event-date-text a:hover {
-            color: #fff;
-            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+            filter: brightness(1.3);
+            text-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
         }
         #animated-text {
             font-family: "ivypresto-display", serif;
@@ -350,10 +355,65 @@
             border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.3s, color 0.3s;
+            animation: glitchLoop 2s infinite;
+            display: inline-block;
         }
         #access-code-text:hover {
             background-color: rgba(255, 255, 255, 0.15);
             color: #fff;
+            animation: none;
+        }
+        
+        @keyframes glitchLoop {
+            0%, 85%, 100% { 
+                transform: translate(0);
+                filter: hue-rotate(0deg);
+                text-shadow: none;
+            }
+            87% { 
+                transform: translate(-1px, 1px);
+                filter: hue-rotate(90deg);
+                text-shadow: 1px 0 #ff00ff, -1px 0 #00ffff;
+            }
+            89% { 
+                transform: translate(1px, -1px);
+                filter: hue-rotate(180deg);
+                text-shadow: -1px 0 #ff00ff, 1px 0 #00ffff;
+            }
+            91% { 
+                transform: translate(-1px, 0px);
+                filter: hue-rotate(270deg);
+                text-shadow: 1px 1px #ff00ff, -1px -1px #00ffff;
+            }
+        }
+
+        #sextant-cube-container {
+            margin-top: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            font-family: 'Inter', sans-serif;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        
+        #sextant-cube-canvas {
+            width: 40px;
+            height: 40px;
+        }
+        
+        #sextant-link {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+        
+        #sextant-link:hover {
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
         }
         #copy-notification {
             position: fixed;
@@ -384,8 +444,8 @@
             align-items: center;
             justify-content: center;
             z-index: 100;
-            opacity: 0; /* Initially hidden */
-            pointer-events: none; /* Initially disabled */
+            opacity: 0;
+            pointer-events: none;
             transition: opacity 1.5s ease-in-out;
         }
         #social-links-container.visible {
@@ -424,6 +484,7 @@
                 flex-direction: column;
                 gap: 0.25rem;
                 text-align: center;
+                margin-top: -2.5rem;
             }
             
             .event-date-text {
@@ -439,7 +500,7 @@
         
         @media (max-height: 500px) {
             #animated-text-container {
-                padding-bottom: 60px; /* Less padding on short screens */
+                padding-bottom: 60px;
             }
             #social-links-container {
                 bottom: 1rem;
@@ -526,7 +587,12 @@
         </a>
 
         <div id="access-code-wrapper">
-            ACCESS CODE: <span id="access-code-text" onclick="copyCode(event)">TENSIONPOINT</span>
+            ACCESS CODE: <span id="access-code-text" onclick="handleAccessCode(event)">TENSION POINT</span>
+        </div>
+        
+        <div id="sextant-cube-container">
+            <canvas id="sextant-cube-canvas"></canvas>
+            <a href="https://www.google.com/maps/place/539+Valencia+St,+San+Francisco,+CA+94110/@37.7625,-122.421,17z" target="_blank" rel="noopener noreferrer" id="sextant-link">Sextant Coffee Roasters</a>
         </div>
     </div>
 
@@ -545,7 +611,7 @@
         </a>
     </div>
 
-    <div id="copy-notification">Copied!</div>
+    <div id="copy-notification">Code Copied to Clipboard!</div>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -558,18 +624,20 @@
         let activeScene = 'title';
         let isTransitioning = false;
         
-        // -- Performance Monitoring --
+        // -- Enhanced Performance Monitoring --
         let performanceStats = {
             frameRate: 60,
             qualityLevel: 'high',
             frameCount: 0,
-            lastTime: performance.now()
+            lastTime: performance.now(),
+            consecutiveLowFrames: 0
         };
         
         // -- Scene Variables --
         let scene, camera, renderer, particles, composer, bloomPass;
         let particleScene, particleCamera, particleRenderer, particleComposer, backgroundVisual;
         let ticketParticleScene, ticketParticleCamera, ticketParticleRenderer, ticketParticles;
+        let sextantCubeScene, sextantCubeCamera, sextantCubeRenderer, sextantCube;
         
         // -- Audio variables
         let audioInitialized = false;
@@ -598,7 +666,7 @@
             };
         };
 
-        // -- OPTIMIZATION: Device capability detection
+        // -- OPTIMIZATION: Enhanced device capability detection
         function getDeviceCapabilities() {
             const canvas = document.createElement('canvas');
             const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -609,44 +677,49 @@
                 screenWidth: window.innerWidth,
                 screenHeight: window.innerHeight,
                 isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
-                isLowEnd: false
+                isLowEnd: false,
+                memoryInfo: navigator.deviceMemory || 4 // Default to 4GB if unknown
             };
             
-            // Detect low-end devices
+            // Enhanced low-end device detection
             capabilities.isLowEnd = capabilities.isMobile || 
                                    capabilities.screenWidth < 768 || 
                                    capabilities.devicePixelRatio < 1.5 ||
-                                   capabilities.maxTextureSize < 2048;
+                                   capabilities.maxTextureSize < 2048 ||
+                                   capabilities.memoryInfo < 4;
             
             return capabilities;
         }
 
         const DEVICE_CAPABILITIES = getDeviceCapabilities();
 
-        // -- OPTIMIZATION: Adaptive particle count and quality
+        // -- OPTIMIZATION: More aggressive adaptive settings
         function getOptimalSettings() {
             const capabilities = DEVICE_CAPABILITIES;
             
             if (capabilities.isLowEnd) {
                 return {
-                    particleCount: 25000,
-                    backgroundParticleCount: 40000,
-                    bloomStrength: 0.3,
-                    pixelRatio: Math.min(capabilities.devicePixelRatio, 1.5),
+                    particleCount: 20000,
+                    backgroundParticleCount: 30000,
+                    cubeParticleCount: 2000,
+                    bloomStrength: 0.2,
+                    pixelRatio: Math.min(capabilities.devicePixelRatio, 1.2),
                     qualityLevel: 'low'
                 };
             } else if (capabilities.isMobile) {
                 return {
-                    particleCount: 75000,
-                    backgroundParticleCount: 60000,
-                    bloomStrength: 0.5,
-                    pixelRatio: Math.min(capabilities.devicePixelRatio, 2),
+                    particleCount: 60000,
+                    backgroundParticleCount: 50000,
+                    cubeParticleCount: 4000,
+                    bloomStrength: 0.4,
+                    pixelRatio: Math.min(capabilities.devicePixelRatio, 1.8),
                     qualityLevel: 'medium'
                 };
             } else {
                 return {
-                    particleCount: 150000,
-                    backgroundParticleCount: 80000,
+                    particleCount: 120000,
+                    backgroundParticleCount: 70000,
+                    cubeParticleCount: 6000,
                     bloomStrength: 0.6,
                     pixelRatio: Math.min(capabilities.devicePixelRatio, 2),
                     qualityLevel: 'high'
@@ -658,7 +731,7 @@
         const PARTICLE_COUNT = OPTIMAL_SETTINGS.particleCount;
         const FIELD_RADIUS = 100;
 
-        // -- OPTIMIZATION: Frame rate monitoring
+        // -- OPTIMIZATION: Enhanced frame rate monitoring with adaptive degradation
         function updatePerformanceStats() {
             performanceStats.frameCount++;
             const now = performance.now();
@@ -668,8 +741,15 @@
                 performanceStats.frameCount = 0;
                 performanceStats.lastTime = now;
                 
-                // Adaptive quality adjustment
-                if (performanceStats.frameRate < 30 && performanceStats.qualityLevel !== 'low') {
+                // Track consecutive low frame periods
+                if (performanceStats.frameRate < 30) {
+                    performanceStats.consecutiveLowFrames++;
+                } else {
+                    performanceStats.consecutiveLowFrames = 0;
+                }
+                
+                // Aggressive quality adjustment for sustained poor performance
+                if (performanceStats.consecutiveLowFrames >= 2 && performanceStats.qualityLevel !== 'low') {
                     adjustQuality('low');
                 } else if (performanceStats.frameRate < 45 && performanceStats.qualityLevel === 'high') {
                     adjustQuality('medium');
@@ -683,16 +763,19 @@
             if (bloomPass) {
                 switch(level) {
                     case 'low':
-                        bloomPass.strength = 0.3;
-                        bloomPass.threshold = 0.9;
+                        bloomPass.strength = 0.2;
+                        bloomPass.threshold = 0.95;
+                        bloomPass.radius = 0.3;
                         break;
                     case 'medium':
-                        bloomPass.strength = 0.5;
-                        bloomPass.threshold = 0.8;
+                        bloomPass.strength = 0.4;
+                        bloomPass.threshold = 0.85;
+                        bloomPass.radius = 0.5;
                         break;
                     case 'high':
                         bloomPass.strength = 0.6;
                         bloomPass.threshold = 0.8;
+                        bloomPass.radius = 0.7;
                         break;
                 }
             }
@@ -700,7 +783,7 @@
 
         /*
          * ==================================
-         * == SHADER CODE (GLSL)           ==
+         * == OPTIMIZED SHADER CODE (GLSL) ==
          * ==================================
          */
         const particleVertexShader = `
@@ -721,6 +804,7 @@
             varying vec3 vColor;
             varying float vAlpha;
 
+            // Optimized noise function
             vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -825,8 +909,8 @@
         const backgroundVertexShader = `
             uniform float uTime;
             attribute float aParticleType; 
-            attribute float aEnsoPosition; // Position along the enso circle (0-1)
-            attribute float aBrushIntensity; // Brush stroke intensity
+            attribute float aEnsoPosition;
+            attribute float aBrushIntensity;
             varying float vAlpha; 
             varying float vParticleType;
             varying vec3 vColor;
@@ -837,8 +921,8 @@
                 vBrushIntensity = aBrushIntensity;
                 
                 // Create enso circle with organic imperfections
-                float angle = aEnsoPosition * 6.28318; // 2PI
-                float radius = 15.0 + sin(aEnsoPosition * 12.0) * 1.5; // Organic radius variation
+                float angle = aEnsoPosition * 6.28318;
+                float radius = 15.0 + sin(aEnsoPosition * 12.0) * 1.5;
                 
                 // Enso gap (traditional zen circle opening)
                 float gapStart = 5.5;
@@ -915,7 +999,7 @@
         
         const ticketParticleVertexShader = `
             uniform float uTime;
-            uniform float uHoverState; // 0 = swirling, 1 = text
+            uniform float uHoverState;
             
             attribute vec3 aTextPosition;
             attribute float aRandomness;
@@ -1010,28 +1094,65 @@
         `;
 
         async function init() {
-            // Visuals first
             initScene(); 
             initParticleScene();
             await initTicketButton(); 
+            await initSextantCube();
             await createParticles();
             setupEventListeners();
             animate();
             document.getElementById('start-overlay').classList.add('ready');
         }
+
+        function handleAccessCode(event) {
+            event.preventDefault(); 
+            event.stopPropagation();
+
+            const code = "TENSION POINT";
+            
+            try {
+                const textArea = document.createElement("textarea");
+                textArea.value = code;
+                textArea.style.position = "fixed"; 
+                textArea.style.top = "0";
+                textArea.style.left = "0";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+
+                const notification = document.getElementById('copy-notification');
+                notification.classList.add('show');
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 2000);
+
+                setTimeout(() => {
+                    window.open('https://www.eventbrite.com/e/surface-tension-digital-drip-an-after-hours-art-rave-tickets-1471279469499?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl', '_blank');
+                }, 500);
+                
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+            }
+        }
         
+        // MOBILE AUDIO INITIALIZATION - Multiple aggressive strategies
         function initAudio() {
             if (audioInitialized) return;
 
-            // Mobile volume boost - mobile speakers need higher levels
-            const mobileVolumeBoost = DEVICE_CAPABILITIES.isMobile ? 8 : 0;
+            const mobileVolumeBoost = DEVICE_CAPABILITIES.isMobile ? 20 : 0;
+
+            if (DEVICE_CAPABILITIES.isMobile) {
+                Tone.Master.volume.value = 8;
+            }
 
             // Master effects chain
             masterReverb = new Tone.Reverb(4).toDestination();
             masterReverb.wet.value = 0.6;
             masterChorus = new Tone.Chorus(2, 2.5, 0.7).connect(masterReverb);
 
-            // Drone synth with mobile volume adjustment
+            // Audio synthesis with mobile optimization
             droneSynth = new Tone.FMSynth({
                 volume: -24 + mobileVolumeBoost,
                 harmonicity: 0.5,
@@ -1040,7 +1161,6 @@
                 modulationEnvelope: { attack: 4, decay: 0.1, sustain: 1, release: 4 }
             }).connect(masterChorus);
 
-            // Arpeggiator with filter and mobile volume boost
             const arpFilter = new Tone.AutoFilter("8n").start();
             const arpSynth = new Tone.MonoSynth({
                 volume: -12 + mobileVolumeBoost,
@@ -1053,7 +1173,6 @@
             }, ["C2", "Eb2", "G2", "Bb2"], "up");
             arp.interval = "16n";
 
-            // Pad synth with mobile volume boost
             padFilter = new Tone.Filter(400, "lowpass").connect(masterChorus);
             padSynth = new Tone.PolySynth(Tone.FMSynth, {
                 volume: -18 + mobileVolumeBoost,
@@ -1062,14 +1181,12 @@
                 envelope: { attack: 3, decay: 0.5, sustain: 1, release: 5 }
             }).connect(padFilter);
 
-            // Noise synth with mobile volume boost
             disintegrateNoise = new Tone.NoiseSynth({
                 volume: -20 + mobileVolumeBoost,
                 noise: { type: 'white' },
                 envelope: { attack: 0.01, decay: 1.5, sustain: 0 }
             }).connect(masterReverb);
 
-            // Climax chime with mobile volume boost
             climaxChime = new Tone.MetalSynth({
                 volume: -10 + mobileVolumeBoost,
                 frequency: 300,
@@ -1080,7 +1197,6 @@
                 octaves: 1.5
             }).connect(masterReverb);
 
-            // **NEW: Kavinsky-style cinematic lead synth with mobile volume boost**
             const cinematicDelay = new Tone.FeedbackDelay("8n", 0.4).connect(masterChorus);
             cinematicDelay.wet.value = 0.7;
             
@@ -1098,14 +1214,14 @@
             }).connect(cinematicChorus);
 
             cinematicLead = new Tone.DuoSynth({
-                volume: -20 + mobileVolumeBoost, // Boosted for mobile
+                volume: -20 + mobileVolumeBoost,
                 vibratoAmount: 0.2,
                 vibratoRate: 4,
                 harmonicity: 1.5,
                 voice0: {
                     oscillator: { 
                         type: 'sawtooth',
-                        partials: [1, 0.5, 0.3, 0.25, 0.2] // Rich harmonic content
+                        partials: [1, 0.5, 0.3, 0.25, 0.2]
                     },
                     envelope: { 
                         attack: 2.5, 
@@ -1138,69 +1254,84 @@
                 }
             }).connect(cinematicFilter);
 
-            // Mobile-specific audio context setup
-            if (DEVICE_CAPABILITIES.isMobile) {
-                // Ensure audio context is properly resumed on mobile
-                if (Tone.context.state === 'suspended') {
-                    Tone.context.resume();
-                }
-                
-                // Set master volume higher for mobile
-                Tone.Master.volume.value = -3; // Boost overall volume on mobile
-            }
-
             audioInitialized = true;
         }
 
+        // DEVICE-ADAPTIVE TEXT GENERATION - Desktop perfect, mobile optimized
         async function getTextPoints() {
             return new Promise((resolve) => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                // Make canvas size responsive to viewport with safety margins
                 const viewportWidth = window.innerWidth;
-                const viewportHeight = window.innerHeight;
                 const isMobile = viewportWidth < 768;
                 
-                // Calculate optimal canvas size based on viewport
-                const canvasSize = isMobile ? Math.min(1536, viewportWidth * 2) : Math.min(2048, viewportWidth * 1.5);
-                const fontSize = isMobile ? Math.max(120, canvasSize * 0.08) : Math.max(160, canvasSize * 0.08);
-                
-                // Adjust scaling to ensure text fits within camera view with safety margins
-                const baseScaling = isMobile ? 0.05 : 0.065;
-                const viewportScaling = Math.min(baseScaling, (viewportWidth * 0.8) / (canvasSize * 0.8));
-                
-                canvas.width = canvasSize;
-                canvas.height = canvasSize;
-                ctx.font = `${fontSize}px "ivypresto-display"`;
-                ctx.fillStyle = '#fff';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(TITLE_TEXT, canvasSize / 2, canvasSize / 2);
-                
-                const imageData = ctx.getImageData(0, 0, canvasSize, canvasSize);
-                const points = [];
-                const density = isMobile ? 3 : 4;
-                
-                for (let y = 0; y < canvasSize; y += density) {
-                    for (let x = 0; x < canvasSize; x += density) {
-                        const alpha = imageData.data[(y * canvasSize + x) * 4 + 3];
-                        if (alpha > 128) {
-                            const worldX = (x - canvasSize / 2) * viewportScaling;
-                            const worldY = -(y - canvasSize / 2) * viewportScaling;
-                            
-                            // Add viewport boundary check with safety margin
-                            const safetyMargin = 20;
-                            const maxX = (viewportWidth / 2) - safetyMargin;
-                            const maxY = (viewportHeight / 2) - safetyMargin;
-                            
-                            if (Math.abs(worldX) < maxX && Math.abs(worldY) < maxY) {
+                if (isMobile) {
+                    // Mobile-specific optimization
+                    const canvasSize = 1536;
+                    const fontSize = 120;
+                    const scaling = 0.022; // Very conservative for mobile
+                    
+                    canvas.width = canvasSize;
+                    canvas.height = canvasSize;
+                    ctx.font = `bold ${fontSize}px "ivypresto-display", serif`;
+                    ctx.fillStyle = '#fff';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    
+                    // Split text for better mobile fitting
+                    const words = TITLE_TEXT.split(' ');
+                    const line1 = words[0];
+                    const line2 = words.slice(1).join(' ');
+                    
+                    ctx.fillText(line1, canvasSize / 2, canvasSize / 2 - fontSize * 0.55);
+                    ctx.fillText(line2, canvasSize / 2, canvasSize / 2 + fontSize * 0.55);
+                    
+                    const imageData = ctx.getImageData(0, 0, canvasSize, canvasSize);
+                    const points = [];
+                    const density = 4;
+                    
+                    for (let y = 0; y < canvasSize; y += density) {
+                        for (let x = 0; x < canvasSize; x += density) {
+                            const alpha = imageData.data[(y * canvasSize + x) * 4 + 3];
+                            if (alpha > 128) {
+                                const worldX = (x - canvasSize / 2) * scaling;
+                                const worldY = -(y - canvasSize / 2) * scaling;
                                 points.push(new THREE.Vector3(worldX, worldY, 0));
                             }
                         }
                     }
+                    resolve(points);
+                } else {
+                    // Desktop version - keep existing perfect implementation
+                    const canvasSize = 2048;
+                    const fontSize = 180;
+                    const scaling = 0.035;
+                    
+                    canvas.width = canvasSize;
+                    canvas.height = canvasSize;
+                    ctx.font = `bold ${fontSize}px "ivypresto-display", serif`;
+                    ctx.fillStyle = '#fff';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(TITLE_TEXT, canvasSize / 2, canvasSize / 2);
+                    
+                    const imageData = ctx.getImageData(0, 0, canvasSize, canvasSize);
+                    const points = [];
+                    const density = 3;
+                    
+                    for (let y = 0; y < canvasSize; y += density) {
+                        for (let x = 0; x < canvasSize; x += density) {
+                            const alpha = imageData.data[(y * canvasSize + x) * 4 + 3];
+                            if (alpha > 128) {
+                                const worldX = (x - canvasSize / 2) * scaling;
+                                const worldY = -(y - canvasSize / 2) * scaling;
+                                points.push(new THREE.Vector3(worldX, worldY, 0));
+                            }
+                        }
+                    }
+                    resolve(points);
                 }
-                resolve(points);
             });
         }
 
@@ -1226,7 +1357,7 @@
             particleRenderer.setSize(window.innerWidth, window.innerHeight);
             particleRenderer.setPixelRatio(OPTIMAL_SETTINGS.pixelRatio);
             
-            // Create sophisticated enso particle system
+            // Optimized enso particle system
             const pCount = OPTIMAL_SETTINGS.backgroundParticleCount;
             const geometry = new THREE.BufferGeometry();
             const pos = new Float32Array(pCount * 3);
@@ -1237,20 +1368,18 @@
             for (let i = 0; i < pCount; i++) {
                 const i3 = i * 3;
                 
-                // Distribute particles along enso circle with clustered brush strokes
                 const ensoPos = (i / pCount) * 2 * Math.PI;
-                const brushCluster = Math.random() < 0.7 ? 1.0 : 0.3; // 70% dense brush strokes
+                const brushCluster = Math.random() < 0.7 ? 1.0 : 0.3;
                 const radiusVariation = (Math.random() - 0.5) * 2.0 * brushCluster;
                 
-                // Base enso circle position
                 const radius = 15 + radiusVariation;
                 pos[i3] = Math.cos(ensoPos) * radius;
                 pos[i3 + 1] = Math.sin(ensoPos) * radius;
                 pos[i3 + 2] = (Math.random() - 0.5) * 3.0;
                 
-                particleTypes[i] = Math.random() < 0.8 ? 1.0 : 0.0; // 80% primary particles
-                ensoPositions[i] = ensoPos / (2 * Math.PI); // Normalized 0-1
-                brushIntensities[i] = Math.pow(Math.random(), 0.6) * brushCluster; // Weighted toward higher intensity
+                particleTypes[i] = Math.random() < 0.8 ? 1.0 : 0.0;
+                ensoPositions[i] = ensoPos / (2 * Math.PI);
+                brushIntensities[i] = Math.pow(Math.random(), 0.6) * brushCluster;
             }
             
             geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -1356,6 +1485,81 @@
             });
         }
 
+        // OPTIMIZED SEXTANT CUBE - Fixed blow-out issue
+        async function initSextantCube() {
+            const canvas = document.getElementById('sextant-cube-canvas');
+            if (!canvas) return;
+
+            const size = 40;
+            sextantCubeScene = new THREE.Scene();
+            sextantCubeCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+            sextantCubeCamera.position.z = 3;
+
+            sextantCubeRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+            sextantCubeRenderer.setSize(size, size);
+            sextantCubeRenderer.setPixelRatio(window.devicePixelRatio);
+
+            // Reduced particle count to prevent blow-out
+            const particleCount = OPTIMAL_SETTINGS.cubeParticleCount;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+
+            const color1 = new THREE.Color(0.06, 0.73, 0.51);
+            const color2 = new THREE.Color(0.66, 0.33, 0.98);
+
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                
+                // Create cube structure with wireframe edges
+                const edge = Math.floor(Math.random() * 12); // 12 edges of a cube
+                let x, y, z;
+                
+                // Define cube wireframe edges
+                const t = Math.random();
+                switch(edge) {
+                    case 0: x = t * 2 - 1; y = -1; z = -1; break;
+                    case 1: x = t * 2 - 1; y = 1; z = -1; break;
+                    case 2: x = t * 2 - 1; y = -1; z = 1; break;
+                    case 3: x = t * 2 - 1; y = 1; z = 1; break;
+                    case 4: x = -1; y = t * 2 - 1; z = -1; break;
+                    case 5: x = 1; y = t * 2 - 1; z = -1; break;
+                    case 6: x = -1; y = t * 2 - 1; z = 1; break;
+                    case 7: x = 1; y = t * 2 - 1; z = 1; break;
+                    case 8: x = -1; y = -1; z = t * 2 - 1; break;
+                    case 9: x = 1; y = -1; z = t * 2 - 1; break;
+                    case 10: x = -1; y = 1; z = t * 2 - 1; break;
+                    case 11: x = 1; y = 1; z = t * 2 - 1; break;
+                    default: x = 0; y = 0; z = 0;
+                }
+                
+                positions[i3] = x;
+                positions[i3 + 1] = y;
+                positions[i3 + 2] = z;
+
+                // Subtle color interpolation
+                const mixFactor = Math.random();
+                const color = color1.clone().lerp(color2, mixFactor);
+                colors[i3] = color.r;
+                colors[i3 + 1] = color.g;
+                colors[i3 + 2] = color.b;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            // Fixed material to prevent blow-out
+            const material = new THREE.PointsMaterial({
+                size: 1.5, // Reduced size
+                vertexColors: true,
+                blending: THREE.NormalBlending, // Changed from AdditiveBlending
+                transparent: true,
+                opacity: 0.6 // Reduced opacity
+            });
+
+            sextantCube = new THREE.Points(geometry, material);
+            sextantCubeScene.add(sextantCube);
+        }
 
         async function createParticles() {
             const textPoints = await getTextPoints();
@@ -1425,21 +1629,59 @@
         }
 
         function setupEventListeners() {
-            // Use debounced resize handler for performance
             window.addEventListener('resize', debounce(onWindowResize, 250), false);
             
             const startOverlay = document.getElementById('start-overlay');
-            startOverlay.addEventListener('click', () => {
+            startOverlay.addEventListener('click', async () => {
                 startOverlay.style.opacity = '0';
                 startOverlay.style.pointerEvents = 'none';
                 
-                // Start audio and visual sequence
-                Tone.start().then(() => {
+                // Enhanced mobile audio initialization
+                try {
+                    await Tone.start();
+                    
+                    if (Tone.context.state === 'suspended') {
+                        await Tone.context.resume();
+                    }
+                    
+                    if (DEVICE_CAPABILITIES.isMobile) {
+                        setTimeout(async () => {
+                            if (Tone.context.state === 'suspended') {
+                                await Tone.context.resume();
+                            }
+                        }, 100);
+                        
+                        setTimeout(() => {
+                            Tone.Master.volume.value = 8;
+                        }, 200);
+                    }
+                    
                     initAudio();
                     runOpeningSequence();
                     document.getElementById('mute-button').classList.add('visible');
-                });
+                    
+                } catch (error) {
+                    console.error('Audio initialization failed:', error);
+                    runOpeningSequence();
+                    document.getElementById('mute-button').classList.add('visible');
+                }
             }, { once: true });
+
+            // Enhanced mobile audio unlock
+            if (DEVICE_CAPABILITIES.isMobile) {
+                ['touchstart', 'touchend', 'click', 'tap'].forEach(eventType => {
+                    document.addEventListener(eventType, async () => {
+                        if (audioInitialized && Tone.context.state === 'suspended') {
+                            try {
+                                await Tone.context.resume();
+                                Tone.Master.volume.value = 8;
+                            } catch (e) {
+                                console.warn('Audio context resume failed:', e);
+                            }
+                        }
+                    }, { passive: true, once: true });
+                });
+            }
 
             const muteButton = document.getElementById('mute-button');
             muteButton.addEventListener('click', () => {
@@ -1510,6 +1752,7 @@
             }
         }
 
+        // STREAMLINED CINEMATIC TRANSITION - 3.5 seconds, sequential staging
         function transitionToSecretPage() {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
@@ -1523,121 +1766,146 @@
             
             gsap.killTweensOf(riddleOverlay);
 
-            // **HOLLYWOOD-LEVEL CINEMATIC TRANSITION**
-            const cinematicTimeline = gsap.timeline();
+            // **OPTIMIZED CINEMATIC TRANSITION - 3.5 seconds total**
+            const masterTimeline = gsap.timeline();
 
-            // Stage 1: Dramatic particle explosion and visual feedback
+            // Stage 1: Quick particle explosion (0.8s)
             if (particles) {
-                cinematicTimeline.to(particles.material.uniforms.uDisperse, {
-                    value: 15.0,
-                    duration: 0.8,
+                masterTimeline.to(particles.material.uniforms.uDisperse, {
+                    value: 30.0,
+                    duration: 0.6,
+                    ease: "expo.out"
+                }, 0);
+
+                masterTimeline.to(visualFeedback, {
+                    glow: 6.0,
+                    duration: 0.4,
                     ease: "power3.out"
                 }, 0);
 
-                cinematicTimeline.to(visualFeedback, {
-                    glow: 3.0,
-                    duration: 0.5,
-                    ease: "power2.out"
-                }, 0);
+                // Controlled screen shake
+                masterTimeline.to(document.body, {
+                    x: "+=4",
+                    duration: 0.03,
+                    ease: "power2.inOut",
+                    yoyo: true,
+                    repeat: 4
+                }, 0.2);
             }
 
-            // Stage 2: Cinematic audio enhancement
+            // Stage 2: Audio stingers (0.5s)
             if (audioInitialized) {
-                // Dramatic climax chime for the unlock moment
-                climaxChime.triggerAttackRelease("G4", "2n", Tone.now() + 0.1);
+                climaxChime.triggerAttackRelease("C5", "1n", Tone.now() + 0.1);
+                climaxChime.triggerAttackRelease("G4", "2n", Tone.now() + 0.3);
                 
-                // Audio stinger and dramatic crescendo
-                const unlockStinger = new Tone.NoiseSynth({
-                    volume: -15,
+                const explosionNoise = new Tone.NoiseSynth({
+                    volume: -10,
                     noise: { type: 'pink' },
-                    envelope: { attack: 0.005, decay: 0.3, sustain: 0 }
+                    envelope: { attack: 0.01, decay: 0.8, sustain: 0 }
                 }).toDestination();
-                unlockStinger.triggerAttack(Tone.now() + 0.3);
+                explosionNoise.triggerAttack(Tone.now() + 0.2);
                 
-                // Fade out existing audio dramatically
-                Tone.Transport.stop();
-                Tone.Transport.cancel();
-                droneSynth.volume.rampTo(-Infinity, 1.2);
-                padSynth.volume.rampTo(-Infinity, 1.2);
-                cinematicLead.volume.rampTo(-Infinity, 1.2);
-                arp.stop();
+                // Quick audio fadeout
+                setTimeout(() => {
+                    Tone.Transport.stop();
+                    Tone.Transport.cancel();
+                    if (droneSynth) droneSynth.volume.rampTo(-Infinity, 1.0);
+                    if (padSynth) padSynth.volume.rampTo(-Infinity, 1.0);
+                    if (cinematicLead) cinematicLead.volume.rampTo(-Infinity, 1.0);
+                    if (arp) arp.stop();
+                }, 600);
             }
 
-            // Stage 3: Camera/scale dramatic zoom effect
-            cinematicTimeline.to(camera, {
-                fov: 45,
+            // Stage 3: Camera zoom (1.0s)
+            masterTimeline.to(camera, {
+                fov: 25,
                 duration: 1.0,
-                ease: "power2.inOut",
+                ease: "power3.inOut",
                 onUpdate: () => {
                     camera.updateProjectionMatrix();
                 }
-            }, 0.3);
+            }, 0.4);
 
-            // Stage 4: Cinematic fade with particle burst
-            cinematicTimeline.to([riddleOverlay, canvasContainer], {
-                duration: 1.8,
+            // Stage 4: Fade out old content (1.2s)
+            masterTimeline.to([canvasContainer, riddleOverlay], {
+                duration: 1.2,
                 opacity: 0,
-                scale: 1.1,
+                scale: 1.4,
+                filter: "blur(15px)",
                 ease: "power3.inOut",
                 onComplete: () => {
                     if (riddleOverlay) riddleOverlay.classList.remove('visible');
                     if (canvasContainer) canvasContainer.classList.add('hidden');
                     activeScene = 'secret';
                     
-                    // Reset camera FOV for next scene
+                    // Reset camera and effects
                     camera.fov = 75;
                     camera.updateProjectionMatrix();
+                    gsap.set(document.body, { x: 0 });
                     
                     startTextAnimation();
                 }
             }, 0.8);
 
-            // Stage 5: Dramatic reveal of new scene
+            // Stage 5: Reveal new content (1.5s)
             if (particleCanvasContainer) {
                 particleCanvasContainer.classList.remove('hidden');
-                cinematicTimeline.fromTo(particleCanvasContainer, 
-                    { opacity: 0, scale: 0.8, filter: 'blur(10px)' },
+                masterTimeline.fromTo(particleCanvasContainer, 
                     { 
-                        duration: 2.0, 
-                        opacity: 1, 
-                        scale: 1.0,
-                        filter: 'blur(0px)',
-                        ease: "power3.out" 
-                    }, 1.5);
-            }
-
-            // Stage 6: Text and social elements entrance
-            if (animatedTextContainer) {
-                animatedTextContainer.classList.add('visible');
-                cinematicTimeline.fromTo(animatedTextContainer, 
-                    { opacity: 0, y: 50, scale: 0.9 },
+                        opacity: 0, 
+                        scale: 0.7, 
+                        filter: 'blur(20px)',
+                    },
                     { 
                         duration: 1.5, 
                         opacity: 1, 
-                        y: 0,
                         scale: 1.0,
-                        ease: "back.out(1.7)" 
-                    }, 2.0);
+                        filter: 'blur(0px)',
+                        ease: "back.out(1.2)" 
+                    }, 1.8);
             }
 
+            // Stage 6: Text entrance (1.2s)
+            if (animatedTextContainer) {
+                animatedTextContainer.classList.add('visible');
+                masterTimeline.fromTo(animatedTextContainer, 
+                    { 
+                        opacity: 0, 
+                        y: 80, 
+                        scale: 0.8,
+                        filter: 'blur(10px)'
+                    },
+                    { 
+                        duration: 1.2, 
+                        opacity: 1, 
+                        y: 0,
+                        scale: 1.0,
+                        filter: 'blur(0px)',
+                        ease: "back.out(1.4)" 
+                    }, 2.3);
+            }
+
+            // Stage 7: Social links (1.0s)
             if (socialLinksContainer) {
                 socialLinksContainer.classList.add('visible');
-                cinematicTimeline.fromTo(socialLinksContainer, 
-                    { opacity: 0, y: 30 },
+                masterTimeline.fromTo(socialLinksContainer, 
+                    { opacity: 0, y: 40, scale: 0.8 },
                     { 
                         duration: 1.0, 
                         opacity: 1, 
                         y: 0,
-                        ease: "power2.out" 
-                    }, 2.5);
+                        scale: 1.0,
+                        ease: "back.out(1.3)" 
+                    }, 2.8);
             }
 
-            // Stage 7: Final dramatic bloom effect
-            cinematicTimeline.to(visualFeedback, {
+            // Stage 8: Effects cleanup (0.5s)
+            masterTimeline.to(visualFeedback, {
                 glow: 0.0,
-                duration: 1.5,
+                disperse: 0.0,
+                duration: 0.5,
                 ease: "power2.inOut"
-            }, 2.0);
+            }, 3.0);
 
             document.getElementById('mute-button').classList.remove('visible');
         }
@@ -1760,7 +2028,7 @@
 
                 arp.start(audioStartTime);
                 
-                // **NEW: Kavinsky-style cinematic lead melody**
+                // Cinematic lead melody
                 const cinematicMelodySequence = new Tone.Sequence((time, note) => {
                     if (note) {
                         cinematicLead.triggerAttackRelease(note, '2n', time);
@@ -1782,10 +2050,10 @@
                     'Eb4', null, 'C4', null,
                     null, 'G4', 'F4', 'Eb4',
                     'D4', null, 'C4', null
-                ], '2n').start("8s"); // Delayed start for dramatic buildup
+                ], '2n').start("8s");
 
                 cinematicMelodySequence.humanize = true;
-                cinematicMelodySequence.probability = 0.85; // Some notes may not play for organic feel
+                cinematicMelodySequence.probability = 0.85;
 
                 padSynth.volume.rampTo(-18, 0.1, audioStartTime);
                 if (padFilter) {
@@ -1878,7 +2146,7 @@
             }
         }
 
-        // -- OPTIMIZATION: Cache uniforms and reduce per-frame updates
+        // -- OPTIMIZED ANIMATION LOOP
         let lastTimeUpdate = 0;
         const TIME_UPDATE_INTERVAL = 16; // ~60fps
 
@@ -1891,7 +2159,7 @@
             const now = performance.now();
             
             if (activeScene === 'title' && particles) {
-                // Only update time uniform if enough time has passed
+                // Optimized uniform updates
                 if (now - lastTimeUpdate > TIME_UPDATE_INTERVAL) {
                     particles.material.uniforms.uTime.value = elapsedTime;
                     lastTimeUpdate = now;
@@ -1905,7 +2173,6 @@
             } else if (activeScene === 'secret') {
                 if (backgroundVisual) {
                     backgroundVisual.material.uniforms.uTime.value = elapsedTime;
-                    // Enso rotation is handled in shader - no manual rotation needed
                 }
                 if (particleCamera) {
                     // Subtle camera movement for depth
@@ -1918,37 +2185,21 @@
                 ticketParticles.material.uniforms.uTime.value = elapsedTime;
                 ticketParticleRenderer.render(ticketParticleScene, ticketParticleCamera);
             }
+
+            if (sextantCube && activeScene === 'secret') {
+                sextantCube.rotation.x += 0.01;
+                sextantCube.rotation.y += 0.015;
+                sextantCube.rotation.z += 0.005;
+                sextantCubeRenderer.render(sextantCubeScene, sextantCubeCamera);
+            }
         }
 
         init();
     });
 
+    // Legacy function kept for compatibility
     function copyCode(event) {
-        event.preventDefault(); 
-        event.stopPropagation();
-
-        const code = document.getElementById('access-code-text').innerText;
-        
-        try {
-            const textArea = document.createElement("textarea");
-            textArea.value = code;
-            textArea.style.position = "fixed"; 
-            textArea.style.top = "0";
-            textArea.style.left = "0";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
-
-            const notification = document.getElementById('copy-notification');
-            notification.classList.add('show');
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 2000);
-        } catch (err) {
-            console.error('Fallback: Oops, unable to copy', err);
-        }
+        handleAccessCode(event);
     }
     </script>
 </body>
