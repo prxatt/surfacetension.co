@@ -759,6 +759,13 @@
         let activeScene = 'title';
         let isTransitioning = false;
         
+        // -- Performance Monitoring & Smart Rendering --
+        let frameCount = 0;
+        let lastFPSCheck = 0;
+        let currentFPS = 60;
+        let adaptiveQuality = 1.0;
+        let performanceLevel = 'high'; // high, medium, low
+        
         // -- Scene Variables --
         let scene, camera, renderer, particles, composer, bloomPass;
         let particleScene, particleCamera, particleRenderer, particleComposer, backgroundVisual;
@@ -821,6 +828,51 @@
 
         const DEVICE_CAPABILITIES = getDeviceCapabilities();
 
+        // Smart Performance Monitoring System
+        function monitorPerformance() {
+            frameCount++;
+            const now = performance.now();
+            
+            if (now - lastFPSCheck >= 1000) {
+                currentFPS = frameCount;
+                frameCount = 0;
+                lastFPSCheck = now;
+                
+                // Adaptive quality adjustment based on performance
+                if (currentFPS < 45) {
+                    performanceLevel = 'low';
+                    adaptiveQuality = 0.7;
+                } else if (currentFPS < 55) {
+                    performanceLevel = 'medium';
+                    adaptiveQuality = 0.85;
+                } else {
+                    performanceLevel = 'high';
+                    adaptiveQuality = 1.0;
+                }
+                
+                // Apply adaptive settings
+                if (renderer) {
+                    renderer.setPixelRatio(Math.min(window.devicePixelRatio * adaptiveQuality, 2));
+                }
+                if (particleRenderer) {
+                    particleRenderer.setPixelRatio(Math.min(window.devicePixelRatio * adaptiveQuality, 2));
+                }
+            }
+        }
+
+        // Smart Particle Count with Performance Adaptation
+        function getAdaptiveParticleCount() {
+            const baseCount = getDynamicParticleCount();
+            
+            // Real-time adaptation based on performance
+            if (performanceLevel === 'low') {
+                return Math.floor(baseCount * 0.6);
+            } else if (performanceLevel === 'medium') {
+                return Math.floor(baseCount * 0.8);
+            }
+            return baseCount;
+        }
+
         function debounce(func, wait, immediate) {
             let timeout;
             return function() {
@@ -844,13 +896,13 @@
 
             // More aggressive optimization for better performance
             if (DEVICE_CAPABILITIES.isLowEnd || width < 768) {
-                return 30000; // Reduced for low-end devices
+                return 25000; // Optimized for low-end devices
             } else if (width < 1200 || memoryInfo < 6) {
-                return 60000; // Moderate for mid-range
+                return 50000; // Optimized for mid-range
             } else if (width < 1920) {
-                return 80000; // Good for higher-end
+                return 70000; // Optimized for higher-end
             }
-            return 100000; // Maximum for powerful devices (reduced from 150k)
+            return 85000; // Maximum for powerful devices
         }
         const PARTICLE_COUNT = getDynamicParticleCount();
         const FIELD_RADIUS = 100;
@@ -1029,19 +1081,32 @@
             setupEventListeners();
             animate();
             document.getElementById('start-overlay').classList.add('ready');
+            
+            // Performance optimization: Garbage collection hints
+            if (window.gc) {
+                setInterval(() => {
+                    if (performanceLevel === 'low') {
+                        window.gc();
+                    }
+                }, 10000);
+            }
         }
         
-        // Ultra-aggressive mobile audio with maximum dB for iOS
+        // Ultra-aggressive mobile audio with Vercel optimization
         async function initAudio() {
             if (audioInitialized) return true;
 
             try {
+                // Vercel hosting optimization - pre-load audio context
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                        latencyHint: 'interactive',
+                        sampleRate: 44100
+                    });
+                }
+
                 // Immediate iOS audio context creation and unlock
                 if (DEVICE_CAPABILITIES.isIOS) {
-                    if (!audioContext) {
-                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    }
-                    
                     // Aggressive immediate resume for iOS
                     if (audioContext.state === 'suspended') {
                         await audioContext.resume();
@@ -1056,7 +1121,22 @@
                     silentSource.start();
                 }
 
+                // Vercel-optimized Tone.js startup
                 await Tone.start();
+                
+                // Increase buffer size for better Vercel performance
+                if (Tone.context.rawContext) {
+                    try {
+                        if (Tone.context.rawContext.audioWorklet) {
+                            // Use larger buffer for hosted environments
+                            Tone.context.lookAhead = 0.1;
+                            Tone.context.updateInterval = 0.05;
+                        }
+                    } catch (e) {
+                        console.warn('Buffer optimization failed:', e);
+                    }
+                }
+                
                 console.log('Tone.js started successfully');
                 
                 // MAXIMUM VOLUME SETTINGS - Ultra aggressive for mobile
@@ -1072,9 +1152,22 @@
                     Tone.Master.volume.value = 0;
                 }
 
+                // Pre-load audio effects for smoother performance
                 masterReverb = new Tone.Reverb(4).toDestination();
                 masterReverb.wet.value = 0.6;
+                await masterReverb.ready;
+                
                 masterChorus = new Tone.Chorus(2, 2.5, 0.7).connect(masterReverb);
+                
+                // Pre-warm audio context for Vercel hosting
+                try {
+                    const warmupOsc = new Tone.Oscillator(20, "sine").toDestination();
+                    warmupOsc.volume.value = -60;
+                    warmupOsc.start();
+                    warmupOsc.stop("+0.01");
+                } catch (e) {
+                    console.warn('Audio warmup failed:', e);
+                }
 
                 // MOBILE VOLUME BOOST - Add 30dB for mobile devices
                 const mobileBoost = DEVICE_CAPABILITIES.isMobile ? 30 : 0;
@@ -1199,13 +1292,13 @@
                 canvas.width = canvasSize;
                 canvas.height = canvasSize;
                 
-                // MOBILE PARTICLE TEXT SIZE FIX: Halved for mobile devices
+                // MOBILE PARTICLE TEXT SIZE ADJUSTMENT
                 let fontSize = 200;
                 let scaleFactor = 0.08;
                 
                 if (DEVICE_CAPABILITIES.isMobile) {
-                    fontSize = 70; // HALF the previous size (was 140)
-                    scaleFactor = 0.0225; // HALF the previous scaling (was 0.045)
+                    fontSize = 100; // Adjusted size for mobile
+                    scaleFactor = 0.0325; // Adjusted scaling for mobile
                 } else if (DEVICE_CAPABILITIES.isTablet) {
                     fontSize = 160;
                     scaleFactor = 0.055;
@@ -1325,8 +1418,9 @@
             particleRenderer.setSize(window.innerWidth, window.innerHeight);
             particleRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             
-            // Optimized finale animation particle count for performance
-            const pCount = DEVICE_CAPABILITIES.isLowEnd ? 40000 : 65000;
+            // Smart particle count for finale animation with performance adaptation
+            const baseCount = DEVICE_CAPABILITIES.isLowEnd ? 35000 : 55000;
+            const pCount = Math.floor(baseCount * adaptiveQuality);
             const geometry = new THREE.BufferGeometry();
             const pos = new Float32Array(pCount * 3);
             const particleTypes = new Float32Array(pCount);
@@ -1364,22 +1458,23 @@
 
         async function createParticles() {
             const textPoints = await getTextPoints();
+            const adaptiveParticleCount = getAdaptiveParticleCount();
             const geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(PARTICLE_COUNT * 3);
-            const targetPositions = new Float32Array(PARTICLE_COUNT * 3);
-            const sizes = new Float32Array(PARTICLE_COUNT);
-            const colors = new Float32Array(PARTICLE_COUNT * 3);
-            const randomness = new Float32Array(PARTICLE_COUNT);
-            const textTargetPositions = new Float32Array(PARTICLE_COUNT * 3);
-            const isTextParticle = new Float32Array(PARTICLE_COUNT);
+            const positions = new Float32Array(adaptiveParticleCount * 3);
+            const targetPositions = new Float32Array(adaptiveParticleCount * 3);
+            const sizes = new Float32Array(adaptiveParticleCount);
+            const colors = new Float32Array(adaptiveParticleCount * 3);
+            const randomness = new Float32Array(adaptiveParticleCount);
+            const textTargetPositions = new Float32Array(adaptiveParticleCount * 3);
+            const isTextParticle = new Float32Array(adaptiveParticleCount);
             const color1 = new THREE.Color("#4338ca");
             const color2 = new THREE.Color("#a855f7");
             const color3 = new THREE.Color("#10b981");
             const textParticleIndices = new Set();
-            while (textParticleIndices.size < textPoints.length * 2 && textParticleIndices.size < PARTICLE_COUNT / 3) {
-                textParticleIndices.add(Math.floor(Math.random() * PARTICLE_COUNT));
+            while (textParticleIndices.size < textPoints.length * 2 && textParticleIndices.size < adaptiveParticleCount / 3) {
+                textParticleIndices.add(Math.floor(Math.random() * adaptiveParticleCount));
             }
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
+            for (let i = 0; i < adaptiveParticleCount; i++) {
                 const i3 = i * 3;
                 const theta = Math.random() * 2 * Math.PI;
                 const phi = Math.acos((Math.random() * 2) - 1);
@@ -1615,17 +1710,26 @@
                 ease: "power2.inOut"
             }, 0.5);
 
-            // Phase 5: Scene cleanup and transition
+            // Phase 5: Scene cleanup and transition with memory optimization
             cinematicTL.call(() => {
                 if (riddleOverlay) riddleOverlay.classList.remove('visible');
                 if (canvasContainer) canvasContainer.classList.add('hidden');
+                
+                // Smart memory cleanup
                 if (particles) {
                     particles.geometry.dispose();
                     particles.material.dispose();
                     scene.remove(particles);
+                    particles = null;
                 }
                 if (renderer) {
                     renderer.renderLists.dispose();
+                    renderer.dispose();
+                }
+                
+                // Force garbage collection if available
+                if (window.gc && performanceLevel === 'low') {
+                    window.gc();
                 }
 
                 activeScene = 'secret';
@@ -1925,54 +2029,74 @@
                     }
                 }
             }
+            
+            // Apply adaptive pixel ratio on resize
+            const adaptivePixelRatio = Math.min(window.devicePixelRatio * adaptiveQuality, 2);
+            if (renderer) renderer.setPixelRatio(adaptivePixelRatio);
+            if (particleRenderer) particleRenderer.setPixelRatio(adaptivePixelRatio);
         }
 
-        // Animation with finale background effects
+        // Animation with smart performance optimization and finale background effects
         let lastTimeUpdate = 0;
         const TIME_UPDATE_INTERVAL = 16;
+        let animationId;
 
         function animate() {
-            requestAnimationFrame(animate);
+            animationId = requestAnimationFrame(animate);
+            
+            // Performance monitoring
+            monitorPerformance();
+            
             const elapsedTime = clock.getElapsedTime();
             const now = performance.now();
             
             if (activeScene === 'title' && particles) {
-                if (now - lastTimeUpdate > TIME_UPDATE_INTERVAL) {
+                // Smart time update based on performance
+                const updateInterval = performanceLevel === 'low' ? 32 : TIME_UPDATE_INTERVAL;
+                
+                if (now - lastTimeUpdate > updateInterval) {
                     particles.material.uniforms.uTime.value = elapsedTime;
                     lastTimeUpdate = now;
                 }
                 particles.material.uniforms.uDisperse.value = visualFeedback.disperse;
                 if (bloomPass) {
-                    bloomPass.strength = 0.6 + visualFeedback.glow;
+                    // Adaptive bloom quality
+                    bloomPass.strength = (0.6 + visualFeedback.glow) * adaptiveQuality;
                 }
                 composer.render();
             } else if (activeScene === 'secret') {
                 if (backgroundVisual) {
                     backgroundVisual.material.uniforms.uTime.value = elapsedTime;
-                    // Enhanced Hollywood-level finale animation with more sophisticated 3D effects
-                    backgroundVisual.rotation.z += 3e-5;
-                    backgroundVisual.rotation.x += 1e-5;
-                    backgroundVisual.rotation.y += 2e-5;
                     
-                    // Advanced ripple animation with depth and layering
-                    const positions = backgroundVisual.geometry.attributes.position.array;
-                    for (let i = 0; i < positions.length; i += 3) {
-                        const x = positions[i];
-                        const y = positions[i + 1];
-                        const d = Math.sqrt(x * x + y * y);
+                    // Adaptive rotation speed based on performance
+                    const rotationSpeed = adaptiveQuality;
+                    backgroundVisual.rotation.z += 3e-5 * rotationSpeed;
+                    backgroundVisual.rotation.x += 1e-5 * rotationSpeed;
+                    backgroundVisual.rotation.y += 2e-5 * rotationSpeed;
+                    
+                    // Smart ripple animation with performance adaptation
+                    if (performanceLevel !== 'low') {
+                        const positions = backgroundVisual.geometry.attributes.position.array;
+                        const updateStep = performanceLevel === 'medium' ? 6 : 3;
                         
-                        // Multi-layered wave system for blockbuster effect
-                        const wave1 = Math.sin(d * 1.2 - elapsedTime * 0.15) * 1.5 * Math.exp(-d * 0.1);
-                        const wave2 = Math.sin(d * 2.5 - elapsedTime * 0.25) * 0.8 * Math.exp(-d * 0.15);
-                        const wave3 = Math.sin(d * 0.8 - elapsedTime * 0.1) * 2.2 * Math.exp(-d * 0.08);
-                        
-                        // Cinematic depth variation
-                        const depthFactor = Math.sin(elapsedTime * 0.05 + d * 0.1) * 0.3;
-                        
-                        // Enhanced ripple with multiple wave interference
-                        positions[i + 2] = wave1 + wave2 * 0.6 + wave3 * 0.4 + depthFactor;
+                        for (let i = 0; i < positions.length; i += updateStep) {
+                            const x = positions[i];
+                            const y = positions[i + 1];
+                            const d = Math.sqrt(x * x + y * y);
+                            
+                            // Multi-layered wave system for blockbuster effect
+                            const wave1 = Math.sin(d * 1.2 - elapsedTime * 0.15) * 1.5 * Math.exp(-d * 0.1);
+                            const wave2 = Math.sin(d * 2.5 - elapsedTime * 0.25) * 0.8 * Math.exp(-d * 0.15);
+                            const wave3 = Math.sin(d * 0.8 - elapsedTime * 0.1) * 2.2 * Math.exp(-d * 0.08);
+                            
+                            // Cinematic depth variation
+                            const depthFactor = Math.sin(elapsedTime * 0.05 + d * 0.1) * 0.3;
+                            
+                            // Enhanced ripple with multiple wave interference
+                            positions[i + 2] = wave1 + wave2 * 0.6 + wave3 * 0.4 + depthFactor;
+                        }
+                        backgroundVisual.geometry.attributes.position.needsUpdate = true;
                     }
-                    backgroundVisual.geometry.attributes.position.needsUpdate = true;
                 }
                 if (particleCamera) {
                     // Enhanced camera movement for cinematic feel
@@ -1984,9 +2108,11 @@
             }
 
             if (sextantCube && activeScene === 'secret') {
-                sextantCube.rotation.x += 0.01;
-                sextantCube.rotation.y += 0.015;
-                sextantCube.rotation.z += 0.005;
+                // Adaptive cube rotation based on performance
+                const rotSpeed = adaptiveQuality;
+                sextantCube.rotation.x += 0.01 * rotSpeed;
+                sextantCube.rotation.y += 0.015 * rotSpeed;
+                sextantCube.rotation.z += 0.005 * rotSpeed;
                 sextantCubeRenderer.render(sextantCubeScene, sextantCubeCamera);
             }
         }
