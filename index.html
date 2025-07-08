@@ -1,4 +1,112 @@
-<!DOCTYPE html>
+// Enhanced mobile audio unlock for all platforms
+        async function unlockAudioContext() {
+            if (audioUnlockAttempts >= MAX_AUDIO_UNLOCK_ATTEMPTS) return false;
+            
+            try {
+                // Multi-platform audio unlock strategies
+                if (DEVICE_CAPABILITIES.isMobile || DEVICE_CAPABILITIES.isIOS) {
+                    // Strategy 1: AudioContext resume
+                    if (audioContext && audioContext.state === 'suspended') {
+                        await audioContext.resume();
+                    }
+                    
+                    // Strategy 2: Tone.js context resume
+                    if (Tone.context.state === 'suspended') {
+                        await Tone.context.resume();
+                    }
+                    
+                    // Strategy 3: Force audio output with boosted volume
+                    if (audioInitialized) {
+                        if (DEVICE_CAPABILITIES.isMobile) {
+                            Tone.Master.volume.value = 25; // Aggressive mobile volume
+                        }
+                        
+                        // Strategy 4: Test audio with Web Audio API
+                        try {
+                            const ctx = audioContext || Tone.context;
+                            const osc = ctx.createOscillator();
+                            const gain = ctx.createGain();
+                            osc.connect(gain);
+                            gain.connect(ctx.destination);
+                            gain.gain.value = 0.001;
+                            osc.frequency.value = 20;
+                            osc.start();
+                            osc.stop(ctx.currentTime + 0.001);
+                        } catch (e) {
+                            // Web Audio test failed, try Tone.js test
+                            try {
+                                const testOsc = new Tone.Oscillator(20, "sine").toDestination();
+                                testOsc.volume.value = -60;
+                                testOsc.start();
+                                testOsc.stop("+0.001");
+                            } catch (e2) {
+                                // Both tests failed
+                            }
+                        }
+                    }
+                }
+                return true;
+            } catch (error) {
+                console.warn('Audio unlock attempt failed:', error);
+                audioUnlockAttempts++;
+                return false;
+            }
+        }
+
+        // Enhanced mobile audio unlock for all platforms
+        async function unlockAudioContext() {
+            if (audioUnlockAttempts >= MAX_AUDIO_UNLOCK_ATTEMPTS) return false;
+            
+            try {
+                // Multi-platform audio unlock strategies
+                if (DEVICE_CAPABILITIES.isMobile || DEVICE_CAPABILITIES.isIOS) {
+                    // Strategy 1: AudioContext resume
+                    if (audioContext && audioContext.state === 'suspended') {
+                        await audioContext.resume();
+                    }
+                    
+                    // Strategy 2: Tone.js context resume
+                    if (Tone.context.state === 'suspended') {
+                        await Tone.context.resume();
+                    }
+                    
+                    // Strategy 3: Force audio output with boosted volume
+                    if (audioInitialized) {
+                        if (DEVICE_CAPABILITIES.isMobile) {
+                            Tone.Master.volume.value = 25; // Aggressive mobile volume
+                        }
+                        
+                        // Strategy 4: Test audio with Web Audio API
+                        try {
+                            const ctx = audioContext || Tone.context;
+                            const osc = ctx.createOscillator();
+                            const gain = ctx.createGain();
+                            osc.connect(gain);
+                            gain.connect(ctx.destination);
+                            gain.gain.value = 0.001;
+                            osc.frequency.value = 20;
+                            osc.start();
+                            osc.stop(ctx.currentTime + 0.001);
+                        } catch (e) {
+                            // Web Audio test failed, try Tone.js test
+                            try {
+                                const testOsc = new Tone.Oscillator(20, "sine").toDestination();
+                                testOsc.volume.value = -60;
+                                testOsc.start();
+                                testOsc.stop("+0.001");
+                            } catch (e2) {
+                                // Both tests failed
+                            }
+                        }
+                    }
+                }
+                return true;
+            } catch (error) {
+                console.warn('Audio unlock attempt failed:', error);
+                audioUnlockAttempts++;
+                return false;
+            }
+        }<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -554,7 +662,7 @@
         /* Enhanced responsive adjustments for better mobile text */
         @media (max-width: 768px) {
             #animated-text {
-                font-size: clamp(2.4rem, 10vw, 5rem);
+                font-size: clamp(1.8rem, 8vw, 4rem);
                 letter-spacing: 0.05em;
                 line-height: 1.1;
                 padding: 0 1rem;
@@ -610,7 +718,7 @@
         /* Better mobile text optimization */
         @media (max-width: 480px) {
             #animated-text {
-                font-size: clamp(2rem, 11vw, 4rem);
+                font-size: clamp(1.6rem, 9vw, 3.5rem);
                 margin: 0.3rem 0;
                 padding: 0 0.5rem;
             }
@@ -621,6 +729,14 @@
             }
             .event-date-text {
                 font-size: clamp(1rem, 5vw, 1.4rem);
+            }
+        }
+
+        /* Extra small screens */
+        @media (max-width: 360px) {
+            #animated-text {
+                font-size: clamp(1.4rem, 10vw, 3rem);
+                padding: 0 0.25rem;
             }
         }
 
@@ -1437,27 +1553,17 @@
                 startOverlay.style.opacity = '0';
                 startOverlay.style.pointerEvents = 'none';
                 
-                // Ultra-aggressive mobile audio initialization with multiple strategies
+                // Mobile audio initialization with bulletproof strategies
                 try {
                     const audioSuccess = await initAudio();
                     
-                    if (audioSuccess && DEVICE_CAPABILITIES.isMobile) {
-                        // Aggressive mobile unlock sequence with multiple attempts
-                        for (let i = 0; i < 8; i++) {
+                    // Multiple mobile audio unlock attempts
+                    if (DEVICE_CAPABILITIES.isMobile) {
+                        // Immediate unlock attempts using dedicated function
+                        for (let i = 0; i < 5; i++) {
                             setTimeout(async () => {
-                                try {
-                                    if (audioContext && audioContext.state === 'suspended') {
-                                        await audioContext.resume();
-                                    }
-                                    if (Tone.context.state === 'suspended') {
-                                        await Tone.context.resume();
-                                    }
-                                    // Force volume to ensure audio activation
-                                    Tone.Master.volume.value = 30;
-                                } catch (e) {
-                                    // Silent fail for aggressive unlocking
-                                }
-                            }, i * 200);
+                                await unlockAudioContext();
+                            }, i * 100);
                         }
                     }
                     
@@ -1471,54 +1577,71 @@
                 }
             }, { once: true });
 
-            // Ultra-aggressive mobile audio unlock with multiple event types
-            const mobileUnlockEvents = DEVICE_CAPABILITIES.isMobile ? 
-                ['touchstart', 'touchend', 'touchmove', 'click', 'tap', 'pointerdown', 'pointerup', 'gesturestart', 'gesturechange'] :
-                ['touchstart', 'click'];
-
-            // Multiple unlock attempts on every possible mobile interaction
-            mobileUnlockEvents.forEach(eventType => {
-                document.addEventListener(eventType, async (e) => {
-                    if (DEVICE_CAPABILITIES.isMobile && audioInitialized) {
-                        try {
-                            // Multi-strategy mobile unlock
-                            if (audioContext && audioContext.state === 'suspended') {
-                                await audioContext.resume();
-                            }
-                            if (Tone.context.state === 'suspended') {
-                                await Tone.context.resume();
-                            }
-                            
-                            // Force audio activation with multiple attempts
-                            Tone.Master.volume.value = 30; // Ultra-aggressive for mobile
-                            
-                            // Play test sound to force activation
-                            if (Math.random() < 0.1) { // Only 10% of the time to avoid spam
-                                const testOsc = new Tone.Oscillator(40, "sine").toDestination();
-                                testOsc.volume.value = -50;
+            // Comprehensive mobile audio unlock with multiple strategies
+            if (DEVICE_CAPABILITIES.isMobile || DEVICE_CAPABILITIES.isIOS) {
+                const mobileAudioEvents = ['touchstart', 'touchend', 'click', 'tap', 'pointerdown'];
+                
+                // Create persistent mobile audio unlock function
+                const mobileAudioUnlock = async () => {
+                    if (!audioInitialized) return;
+                    
+                    try {
+                        // Use dedicated unlock function
+                        await unlockAudioContext();
+                        
+                        // Additional mobile-specific unlock attempts
+                        if (Math.random() < 0.3) { // 30% chance to avoid spam
+                            try {
+                                const testOsc = new Tone.Oscillator(30, "sine").toDestination();
+                                testOsc.volume.value = -60;
                                 testOsc.start();
-                                testOsc.stop("+0.01");
+                                testOsc.stop("+0.005");
+                            } catch (e) {
+                                // Silent fail
                             }
-                        } catch (err) {
-                            // Silent fail
                         }
+                        
+                    } catch (error) {
+                        // Silent fail for mobile unlock attempts
                     }
-                }, { passive: true });
-            });
-
-            // Continuous mobile audio monitoring
-            if (DEVICE_CAPABILITIES.isMobile) {
-                const mobileAudioMonitor = setInterval(() => {
-                    if (audioInitialized && Tone.context.state === 'suspended') {
-                        Tone.context.resume().catch(() => {});
+                };
+                
+                // Attach to multiple mobile events
+                mobileAudioEvents.forEach(eventType => {
+                    document.addEventListener(eventType, mobileAudioUnlock, { passive: true });
+                });
+                
+                // Periodic mobile audio context check
+                const mobileAudioCheck = setInterval(() => {
+                    if (audioInitialized) {
+                        if (Tone.context.state === 'suspended') {
+                            Tone.context.resume().catch(() => {});
+                        }
                         if (audioContext && audioContext.state === 'suspended') {
                             audioContext.resume().catch(() => {});
                         }
                     }
-                }, 1000);
+                }, 2000);
                 
-                // Clear monitor after 30 seconds
-                setTimeout(() => clearInterval(mobileAudioMonitor), 30000);
+                // Clear interval after 60 seconds
+                setTimeout(() => clearInterval(mobileAudioCheck), 60000);
+                
+                // Additional mobile-specific strategies
+                if (DEVICE_CAPABILITIES.isIOS) {
+                    // iOS-specific unlock on orientation change
+                    window.addEventListener('orientationchange', mobileAudioUnlock, { passive: true });
+                    
+                    // iOS visibility change unlock
+                    document.addEventListener('visibilitychange', () => {
+                        if (!document.hidden) {
+                            setTimeout(mobileAudioUnlock, 100);
+                        }
+                    });
+                }
+                
+                // Mobile focus/blur unlock
+                window.addEventListener('focus', mobileAudioUnlock, { passive: true });
+                window.addEventListener('blur', mobileAudioUnlock, { passive: true });
             }
 
             const muteButton = document.getElementById('mute-button');
@@ -1527,6 +1650,48 @@
                 Tone.Master.mute = !Tone.Master.mute;
                 muteButton.className = Tone.Master.mute ? 'muted visible' : 'unmuted visible';
             });
+
+            // Mobile audio diagnostic and recovery
+            if (DEVICE_CAPABILITIES.isMobile) {
+                // Add mobile audio recovery on page focus
+                window.addEventListener('pageshow', async () => {
+                    if (audioInitialized) {
+                        setTimeout(async () => {
+                            try {
+                                if (Tone.context.state === 'suspended') {
+                                    await Tone.context.resume();
+                                }
+                                if (audioContext && audioContext.state === 'suspended') {
+                                    await audioContext.resume();
+                                }
+                                // Test with silent tone to verify unlock
+                                const testTone = new Tone.Oscillator(20, "sine").toDestination();
+                                testTone.volume.value = -60;
+                                testTone.start();
+                                testTone.stop("+0.001");
+                            } catch (e) {
+                                // Silent fail
+                            }
+                        }, 500);
+                    }
+                });
+                
+                // Mobile audio recovery on visibility change
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden && audioInitialized) {
+                        setTimeout(async () => {
+                            try {
+                                if (Tone.context.state === 'suspended') {
+                                    await Tone.context.resume();
+                                    Tone.Master.volume.value = Math.max(Tone.Master.volume.value, 25);
+                                }
+                            } catch (e) {
+                                // Silent fail
+                            }
+                        }, 100);
+                    }
+                });
+            }
 
             const passwordForm = document.getElementById('password-form');
             const passwordInput = document.getElementById('password-input');
@@ -1713,6 +1878,23 @@
 
         function handleTyping(e) {
             if (isTransitioning) return;
+            
+            // Mobile audio unlock during typing
+            if (DEVICE_CAPABILITIES.isMobile && audioInitialized) {
+                try {
+                    if (Tone.context.state === 'suspended') {
+                        Tone.context.resume().catch(() => {});
+                    }
+                    if (audioContext && audioContext.state === 'suspended') {
+                        audioContext.resume().catch(() => {});
+                    }
+                    // Boost volume on interaction
+                    Tone.Master.volume.value = Math.max(Tone.Master.volume.value, 25);
+                } catch (err) {
+                    // Silent fail
+                }
+            }
+            
             const currentInput = e.target.value.toUpperCase();
             let matchCount = 0;
             const target = "LIMINAL";
@@ -1734,6 +1916,23 @@
         
         function checkPassword(isAutoTrigger = false) {
             if (isTransitioning) return;
+            
+            // Mobile audio unlock during password submission
+            if (DEVICE_CAPABILITIES.isMobile && audioInitialized) {
+                try {
+                    if (Tone.context.state === 'suspended') {
+                        Tone.context.resume().catch(() => {});
+                    }
+                    if (audioContext && audioContext.state === 'suspended') {
+                        audioContext.resume().catch(() => {});
+                    }
+                    // Final volume boost attempt
+                    Tone.Master.volume.value = Math.max(Tone.Master.volume.value, 25);
+                } catch (err) {
+                    // Silent fail
+                }
+            }
+            
             const passwordInput = document.getElementById('password-input');
             const passwordForm = document.getElementById('password-form');
             const enteredPassword = passwordInput.value.toUpperCase().trim();
@@ -1801,21 +2000,26 @@
             const riddleOverlay = document.getElementById('riddle-overlay');
             const tl = gsap.timeline();
 
+        // RESTORE ORIGINAL TIMING AND AUDIO
+        function runOpeningSequence() {
+            const riddleOverlay = document.getElementById('riddle-overlay');
+            const tl = gsap.timeline();
+
             if (audioInitialized) {
                 Tone.Transport.bpm.value = 110; 
                 Tone.Transport.start();
 
                 droneSynth.triggerAttack("C1", Tone.now());
 
-                const audioStartTime = "1.5s";
+                const audioStartTime = "2.0s"; // RESTORED ORIGINAL TIMING
 
                 const chordProgression = [
                     { time: "0:0", note: "Cm", duration: "1m" },
                     { time: "1:0", note: "Gm", duration: "1m" },
                     { time: "2:0", note: "Fm", duration: "1m" },
                     { time: "3:0", note: "Cm", duration: "1m" },
-                    { time: "4:0", note: "Fm", duration: "1.5m" }, 
-                    { time: "5:2", note: "Cm", duration: "1.5m" }
+                    { time: "4:0", note: "Fm", duration: "2m" }, 
+                    { time: "6:0", note: "Cm", duration: "2m" }
                 ];
 
                 new Tone.Part((time, value) => {
@@ -1830,7 +2034,7 @@
 
                 arp.start(audioStartTime);
                 
-                // Restored cinematic lead melody from original
+                // RESTORED ORIGINAL CINEMATIC TIMING
                 const cinematicMelodySequence = new Tone.Sequence((time, note) => {
                     if (note) {
                         cinematicLead.triggerAttackRelease(note, '2n', time);
@@ -1851,16 +2055,64 @@
                     'Eb4', null, 'C4', null,
                     null, 'G4', 'F4', 'Eb4',
                     'D4', null, 'C4', null
-                ], '2n').start("6.5s");
+                ], '2n').start("8s"); // RESTORED ORIGINAL TIMING
 
                 cinematicMelodySequence.humanize = true;
                 cinematicMelodySequence.probability = 0.85;
 
                 padSynth.volume.rampTo(-18, 0.1, audioStartTime);
                 if (padFilter) {
-                    padFilter.frequency.rampTo(4000, 7, Tone.now() + 2.0); 
+                    padFilter.frequency.rampTo(4000, 8, Tone.now() + 2.5); // RESTORED ORIGINAL
                 }
             }
+
+            // ORIGINAL TIMING PRESERVED
+            tl.to(particles.material.uniforms.uExpansionProgress, {
+                value: 1.0,
+                duration: 6,
+                ease: 'power3.out'
+            }, "start");
+            
+            tl.to(particles.material.uniforms.uConvergenceProgress, {
+                value: 1.0,
+                duration: 8.5,
+                ease: 'power2.inOut',
+                onStart: () => {
+                    if (audioInitialized) {
+                         climaxChime.triggerAttack(Tone.now() + 0.1);
+                    }
+                }
+            }, "start+=4.0");
+
+            tl.to(particles.material.uniforms.uDisintegrationProgress, {
+                value: 1.0,
+                duration: 3.5, 
+                ease: 'power2.in',
+                onStart: () => {
+                    if (audioInitialized) {
+                        disintegrateNoise.triggerAttack(Tone.now() + 0.1);
+                    }
+                }
+            }, "start+=13.5");
+
+            tl.to(riddleOverlay, {
+                opacity: 1,
+                duration: 1.5,
+                ease: 'power2.out',
+                onStart: () => {
+                    if (riddleOverlay) riddleOverlay.classList.add('visible');
+                    if(audioInitialized) {
+                        const outroTime = Tone.Transport.now() + 40; // RESTORED ORIGINAL
+                        padSynth.volume.rampTo(-Infinity, 5, outroTime);
+                        cinematicLead.volume.rampTo(-Infinity, 6, outroTime);
+                        arp.stop(outroTime + 4);
+                        droneSynth.volume.rampTo(-Infinity, 8, outroTime + 1);
+                        
+                        Tone.Transport.stop(outroTime + 10);
+                    }
+                }
+            }, ">-1.0");
+        }
 
             // ORIGINAL TIMING PRESERVED
             tl.to(particles.material.uniforms.uExpansionProgress, {
