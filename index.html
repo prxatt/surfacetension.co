@@ -469,6 +469,8 @@
             opacity: 0;
             pointer-events: none;
             transition: opacity 1.5s ease-in-out;
+            /* MOBILE LAYOUT FIX: Add padding to make space for footer */
+            padding-bottom: 4rem;
         }
         #social-links-container.visible {
             opacity: 1;
@@ -562,11 +564,21 @@
             #event-date-container { flex-direction: column; gap: 0.25rem; text-align: center; }
             .event-date-text { font-size: clamp(1.2rem, 4vw, 1.6rem); }
             #ticket-button { width: 260px; height: 75px; font-size: 1.1rem; }
-            #social-links-container { gap: 2.5rem; bottom: 1rem; }
+            #social-links-container { 
+                gap: 2rem; 
+                bottom: 1rem; 
+                /* MOBILE LAYOUT FIX: Ensure it doesn't overlap footer */
+                padding-bottom: 2.5rem; 
+            }
             #social-links-container svg { width: 18px; height: 18px; }
             #sextant-cube-container { margin-top: 1.8rem; gap: 0.5rem; }
             #sextant-cube-canvas { width: 32px; height: 32px; }
-            #footer-elements { flex-direction: column; gap: 0.5rem; padding: 0 1rem; bottom: 0.3rem; }
+            #footer-elements { 
+                flex-direction: column; 
+                gap: 0.5rem; 
+                padding: 0 1rem; 
+                bottom: 0.3rem; 
+            }
         }
         @media (max-height: 500px) {
             #animated-text-container { padding-bottom: 60px; }
@@ -687,7 +699,6 @@
         let sextantCubeScene, sextantCubeCamera, sextantCubeRenderer, sextantCube;
         
         // --- Bulletproof Audio Management ---
-        let audioContext;
         let isAudioUnlocked = false; // Tracks if user has interacted
         let isAudioInitialized = false; // Tracks if Tone.js objects are created
         let droneSynth, arp, padSynth, disintegrateNoise, climaxChime, masterReverb, masterChorus, padFilter, cinematicLead;
@@ -716,24 +727,18 @@
                 frameCount = 0;
                 lastFPSCheckTime = now;
                 
-                if (currentFPS < 40) {
-                    if (performanceLevel !== 'low') {
-                        performanceLevel = 'low';
-                        adaptiveQuality = 0.6;
-                        applyAdaptiveSettings();
-                    }
-                } else if (currentFPS < 55) {
-                    if (performanceLevel !== 'medium') {
-                        performanceLevel = 'medium';
-                        adaptiveQuality = 0.8;
-                        applyAdaptiveSettings();
-                    }
-                } else {
-                    if (performanceLevel !== 'high') {
-                        performanceLevel = 'high';
-                        adaptiveQuality = 1.0;
-                        applyAdaptiveSettings();
-                    }
+                if (currentFPS < 40 && performanceLevel !== 'low') {
+                    performanceLevel = 'low';
+                    adaptiveQuality = 0.6;
+                    applyAdaptiveSettings();
+                } else if (currentFPS < 55 && currentFPS >= 40 && performanceLevel !== 'medium') {
+                    performanceLevel = 'medium';
+                    adaptiveQuality = 0.8;
+                    applyAdaptiveSettings();
+                } else if (currentFPS >= 55 && performanceLevel !== 'high') {
+                    performanceLevel = 'high';
+                    adaptiveQuality = 1.0;
+                    applyAdaptiveSettings();
                 }
             }
         }
@@ -748,7 +753,7 @@
         // --- Optimized Particle Count ---
         function getAdaptiveParticleCount(baseCount) {
              if (isLowEndDevice) {
-                return Math.floor(baseCount * 0.5);
+                return Math.floor(baseCount * 0.4); // More aggressive reduction for mobile
             }
             return Math.floor(baseCount * adaptiveQuality);
         }
@@ -922,18 +927,21 @@
         function unlockAudio() {
             if (isAudioUnlocked) return;
             try {
+                const context = Tone.context;
                 // Create a temporary oscillator to force audio hardware to wake up on iOS
-                const silentOscillator = Tone.context.createOscillator();
+                const silentOscillator = context.createOscillator();
                 silentOscillator.frequency.value = 20; // Inaudible frequency
-                silentOscillator.connect(Tone.context.destination);
+                silentOscillator.connect(context.destination);
                 silentOscillator.start(0);
-                silentOscillator.stop(Tone.context.currentTime + 0.01);
+                silentOscillator.stop(context.currentTime + 0.01);
 
-                Tone.start();
-                if (Tone.context.state === 'suspended') {
-                    Tone.context.resume();
+                if (context.state === 'suspended') {
+                    context.resume().then(() => {
+                        console.log('AudioContext resumed successfully.');
+                    });
                 }
-                console.log('Audio unlocked successfully.');
+                Tone.start();
+                console.log('Audio unlocked. Tone.js state:', Tone.context.state);
                 isAudioUnlocked = true;
             } catch (error) {
                 console.warn('Audio unlock failed. This can happen if not triggered by a direct user action.', error);
@@ -993,8 +1001,15 @@
             canvas.width = canvasSize;
             canvas.height = canvasSize;
             
-            let fontSize = isLowEndDevice ? 120 : 200;
-            let scaleFactor = isLowEndDevice ? 0.0375 : 0.08;
+            // FIX: Restore original desktop size, keep mobile size optimized
+            let fontSize, scaleFactor;
+            if (isLowEndDevice) {
+                fontSize = 120;
+                scaleFactor = 0.0375;
+            } else {
+                fontSize = 200; // Original desktop font size
+                scaleFactor = 0.08; // Original desktop scale factor
+            }
             
             ctx.font = `bold ${fontSize}px "ivypresto-display", serif`;
             ctx.fillStyle = '#fff';
@@ -1148,8 +1163,8 @@
                 startOverlay.style.opacity = '0';
                 startOverlay.style.pointerEvents = 'none';
                 
-                // --- NEW AUDIO FLOW ---
-                // 1. Synchronously unlock audio context.
+                // --- ROBUST AUDIO FLOW ---
+                // 1. Synchronously unlock audio context on the first user gesture.
                 unlockAudio();
                 
                 // 2. Asynchronously initialize all audio nodes.
@@ -1357,9 +1372,9 @@
             requestAnimationFrame(animate);
             monitorPerformance(now);
             
-            // --- OPTIMIZATION: Only render if enough time has passed, based on performance level ---
-            const requiredElapsed = performanceLevel === 'low' ? 30 : 16; // ~33fps or ~60fps
-            if (now - lastRenderTime < requiredElapsed) {
+            // --- VERCEL OPTIMIZATION: Less aggressive frame skipping for smoother perceived motion ---
+            const requiredElapsed = performanceLevel === 'low' ? 28 : 16; // ~35fps or ~60fps
+            if (now - lastRenderTime < requiredElapsed && now !== 0) {
                 return;
             }
             lastRenderTime = now;
