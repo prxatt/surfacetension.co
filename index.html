@@ -890,10 +890,9 @@
                     pos = mix(convergedPos, chaoticPos, disintegrationFactor);
                 }
                 
-                if (uPerformance > 0.5) {
-                    pos.x += snoise(vec3(pos.y * 0.5, uTime * 2.0, aRandomness)) * uDisperse;
-                    pos.y += snoise(vec3(pos.z * 0.5, uTime * 2.0, aRandomness)) * uDisperse;
-                }
+                // FIX: Apply disperse animation on all performance tiers
+                pos.x += snoise(vec3(pos.y * 0.5, uTime * 2.0, aRandomness)) * uDisperse;
+                pos.y += snoise(vec3(pos.z * 0.5, uTime * 2.0, aRandomness)) * uDisperse;
                 
                 vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
                 gl_PointSize = aSize * (200.0 / -mvPosition.z);
@@ -904,7 +903,8 @@
                 if (aIsTextParticle > 0.5) {
                     float textVisibility = convergenceFactor * (1.0 - disintegrationFactor);
                     vAlpha = mix(vAlpha, 0.9, textVisibility);
-                    vColor = mix(aColor, vec3(1.5, 1.5, 1.5), textVisibility);
+                    // FIX: Reduce brightness of text particles to prevent blowout
+                    vColor = mix(aColor, vec3(1.3, 1.3, 1.3), textVisibility);
                 } else {
                     vColor = aColor;
                 }
@@ -1105,7 +1105,7 @@
             fgComposer.addPass(new THREE.RenderPass(fgScene, fgCamera));
             // FIX: Tweak bloom and disable on low performance tier
             if (performanceLevel !== 'low') {
-                bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.5, 0.1);
+                bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.6, 0.1);
                 fgComposer.addPass(bloomPass);
             }
         }
