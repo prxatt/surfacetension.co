@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <!-- FIX: Removed user-scalable=no to resolve linter warnings and improve accessibility where possible. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Surface Tension</title>
     
     <!-- Vercel Analytics & Speed Insights are preserved -->
@@ -27,7 +28,7 @@
             background-color: #000000;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-            overscroll-behavior: none; /* Prevents pull-to-refresh on mobile */
+            overscroll-behavior: none; /* Prevents pull-to-refresh on mobile. Safe to keep. */
         }
         .canvas-container {
             position: fixed;
@@ -690,7 +691,7 @@
         // --- Smart Performance Monitoring & Adaptive Quality ---
         let frameCount = 0;
         let lastFPSCheckTime = 0;
-        let performanceLevel = 'high'; // high, medium, low
+        let performanceLevel = 'high'; // 'high', 'medium', 'low'
         let adaptiveQuality = 1.0; // 0.5 (low) to 1.0 (high)
 
         // --- Scene Variables ---
@@ -710,14 +711,32 @@
         let tapCount = 0;
         let tapTimer = null;
         
-        // --- Device Capability Detection ---
-        const isLowEndDevice = (() => {
+        // --- VERCEL PERFORMANCE: Enhanced Device Capability Detection ---
+        const getPerformanceTier = () => {
             const ua = navigator.userAgent;
             const isMobile = /Mobi|Android|iPhone/i.test(ua);
-            const screenArea = window.innerWidth * window.innerHeight;
+            const screenArea = window.innerWidth * window.innerHeight * window.devicePixelRatio;
             const memory = navigator.deviceMemory || 2;
-            return isMobile || screenArea < 921600 || memory < 4; // 1280x720
-        })();
+
+            if (isMobile || screenArea < 1000000 || memory < 4) {
+                console.log("Performance Tier: Low");
+                return 'low';
+            }
+            if (screenArea < 2500000 || memory < 8) {
+                console.log("Performance Tier: Medium");
+                return 'medium';
+            }
+            console.log("Performance Tier: High");
+            return 'high';
+        };
+
+        performanceLevel = getPerformanceTier();
+        
+        // Set initial quality based on tier
+        if (performanceLevel === 'low') adaptiveQuality = 0.5;
+        else if (performanceLevel === 'medium') adaptiveQuality = 0.75;
+        else adaptiveQuality = 1.0;
+
 
         // --- Smart Performance Monitoring System ---
         function monitorPerformance(now) {
@@ -727,35 +746,40 @@
                 frameCount = 0;
                 lastFPSCheckTime = now;
                 
-                if (currentFPS < 40 && performanceLevel !== 'low') {
+                // More aggressive down-scaling
+                if (currentFPS < 35 && performanceLevel !== 'low') {
                     performanceLevel = 'low';
-                    adaptiveQuality = 0.6;
+                    adaptiveQuality = 0.5;
                     applyAdaptiveSettings();
-                } else if (currentFPS < 55 && currentFPS >= 40 && performanceLevel !== 'medium') {
+                } else if (currentFPS < 50 && performanceLevel === 'high') {
                     performanceLevel = 'medium';
-                    adaptiveQuality = 0.8;
-                    applyAdaptiveSettings();
-                } else if (currentFPS >= 55 && performanceLevel !== 'high') {
-                    performanceLevel = 'high';
-                    adaptiveQuality = 1.0;
+                    adaptiveQuality = 0.75;
                     applyAdaptiveSettings();
                 }
             }
         }
 
         function applyAdaptiveSettings() {
-            const newPixelRatio = Math.min(window.devicePixelRatio * adaptiveQuality, 2);
+            const newPixelRatio = Math.min(window.devicePixelRatio * adaptiveQuality, 1.5);
             if (fgRenderer) fgRenderer.setPixelRatio(newPixelRatio);
             if (bgRenderer) bgRenderer.setPixelRatio(newPixelRatio);
-            if (bloomPass) bloomPass.strength = (0.6 + visualFeedback.glow) * adaptiveQuality;
+            // FIX: Adjust bloom strength with adaptive quality
+            if (bloomPass) bloomPass.strength = 0.4 * adaptiveQuality;
+            
+            // Update shader uniform for performance
+            if (fgParticles) fgParticles.material.uniforms.uPerformance.value = performanceLevel === 'low' ? 0.0 : 1.0;
+            if (bgRippleVisual) bgRippleVisual.material.uniforms.uPerformance.value = performanceLevel === 'low' ? 0.0 : 1.0;
         }
 
         // --- Optimized Particle Count ---
         function getAdaptiveParticleCount(baseCount) {
-             if (isLowEndDevice) {
-                return Math.floor(baseCount * 0.4); // More aggressive reduction for mobile
+             if (performanceLevel === 'low') {
+                return Math.floor(baseCount * 0.2); // Most aggressive reduction
             }
-            return Math.floor(baseCount * adaptiveQuality);
+            if (performanceLevel === 'medium') {
+                return Math.floor(baseCount * 0.5);
+            }
+            return Math.floor(baseCount * 0.8); // Slightly reduce from 1.0 for high tier too
         }
 
         // --- Debounce Utility ---
@@ -769,11 +793,9 @@
 
         /*
          * ==================================
-         * == SHADER CODE (OPTIMIZED) ==
+         * == SHADER CODE (OPTIMIZED FOR LAG) ==
          * ==================================
          */
-        // NOTE: Shaders are kept largely the same as they are the core artistic component.
-        // Performance gains are made elsewhere (particle count, render loop).
         const foregroundVertexShader = `
             uniform float uTime;
             uniform float uExpansionProgress;
@@ -781,16 +803,19 @@
             uniform float uDisintegrationProgress;
             uniform float uFieldRadius;
             uniform float uDisperse;
+            uniform float uPerformance; // 0.0 for low, 1.0 for high
+
             attribute float aSize;
             attribute vec3 aColor;
             attribute vec3 aTargetPosition;
             attribute float aRandomness;
             attribute float aIsTextParticle;
             attribute vec3 aTextTargetPosition;
+
             varying vec3 vColor;
             varying float vAlpha;
 
-            // snoise function (omitted for brevity, it's unchanged from original)
+            // snoise function (omitted for brevity, it's unchanged)
             vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -840,10 +865,12 @@
 
             void main() {
                 vec3 chaoticPos = aTargetPosition;
-                float noiseFactor = snoise(vec3(chaoticPos.xy * 0.05, uTime * 0.1 + aRandomness * 5.0));
-                chaoticPos.z += noiseFactor * 2.0;
-                chaoticPos.x += snoise(vec3(chaoticPos.yz * 0.05, uTime * 0.1)) * 0.5;
-                chaoticPos.y += snoise(vec3(chaoticPos.xz * 0.05, uTime * 0.1)) * 0.5;
+                // VERCEL LAG FIX: Reduce shader complexity on low-end devices
+                if (uPerformance > 0.5) {
+                    float noiseFactor = snoise(vec3(chaoticPos.xy * 0.05, uTime * 0.1 + aRandomness * 5.0));
+                    chaoticPos.z += noiseFactor * 2.0;
+                }
+
                 float speed = uTime * 2.0;
                 vec3 drift = vec3(0.0);
                 if (length(aTargetPosition) > 0.0) {
@@ -861,8 +888,10 @@
                     pos = mix(convergedPos, chaoticPos, disintegrationFactor);
                 }
                 
-                pos.x += snoise(vec3(pos.y * 0.5, uTime * 2.0, aRandomness)) * uDisperse;
-                pos.y += snoise(vec3(pos.z * 0.5, uTime * 2.0, aRandomness)) * uDisperse;
+                if (uPerformance > 0.5) {
+                    pos.x += snoise(vec3(pos.y * 0.5, uTime * 2.0, aRandomness)) * uDisperse;
+                    pos.y += snoise(vec3(pos.z * 0.5, uTime * 2.0, aRandomness)) * uDisperse;
+                }
                 
                 vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
                 gl_PointSize = aSize * (200.0 / -mvPosition.z);
@@ -888,24 +917,34 @@
                 float dist = distance(gl_PointCoord, vec2(0.5));
                 float strength = 1.0 - dist * 2.0;
                 if (strength < 0.0) discard;
-                gl_FragColor = vec4(vColor, strength * vAlpha);
+                vec4 color = vec4(vColor, strength * vAlpha);
+                // FIX: Clamp color to prevent "blown out" look from bloom
+                color.rgb = clamp(color.rgb, 0.0, 1.2);
+                gl_FragColor = color;
             }
         `;
 
         const backgroundVertexShader = `
             uniform float uTime;
+            uniform float uPerformance; // 0.0 for low, 1.0 for high
             varying float vAlpha;
             varying vec3 vColor;
             void main() {
                 vec4 p = vec4(position, 1.0);
                 float dist = length(p.xy);
+                
+                // VERCEL LAG FIX: Simpler ripple on low-end devices
                 float ripple1 = sin(dist * 1.2 - uTime * 0.15) * 1.5 * exp(-dist * 0.1);
-                float ripple2 = sin(dist * 2.5 - uTime * 0.25) * 0.8 * exp(-dist * 0.15);
+                float ripple2 = 0.0;
+                if (uPerformance > 0.5) {
+                    ripple2 = sin(dist * 2.5 - uTime * 0.25) * 0.8 * exp(-dist * 0.15);
+                }
                 p.z += ripple1 + ripple2;
+
                 vec4 mvPosition = modelViewMatrix * p;
                 float zFactor = 1.0 - clamp(abs(mvPosition.z / 20.0), 0.0, 1.0);
                 gl_PointSize = (zFactor * zFactor) * 2.0 + 0.5;
-                vAlpha = zFactor * 0.7; // Slightly reduced alpha to stay in background
+                vAlpha = zFactor * 0.7;
                 vColor = mix(vec3(0.06, 0.9, 0.6), vec3(0.7, 0.75, 0.85), sin(uTime + position.x) * 0.5 + 0.5);
                 gl_Position = projectionMatrix * mvPosition;
             }
@@ -923,59 +962,50 @@
         `;
         
         // --- BULLETPROOF MOBILE & DESKTOP AUDIO ---
-        // Step 1: Synchronous Unlock on user interaction
         function unlockAudio() {
             if (isAudioUnlocked) return;
             try {
                 const context = Tone.context;
-                // Create a temporary oscillator to force audio hardware to wake up on iOS
                 const silentOscillator = context.createOscillator();
-                silentOscillator.frequency.value = 20; // Inaudible frequency
+                silentOscillator.frequency.value = 20;
                 silentOscillator.connect(context.destination);
                 silentOscillator.start(0);
                 silentOscillator.stop(context.currentTime + 0.01);
 
                 if (context.state === 'suspended') {
-                    context.resume().then(() => {
-                        console.log('AudioContext resumed successfully.');
-                    });
+                    context.resume().then(() => console.log('AudioContext resumed successfully.'));
                 }
-                Tone.start();
-                console.log('Audio unlocked. Tone.js state:', Tone.context.state);
+                Tone.start().then(() => console.log('Tone.js started.'));
                 isAudioUnlocked = true;
             } catch (error) {
-                console.warn('Audio unlock failed. This can happen if not triggered by a direct user action.', error);
+                console.warn('Audio unlock failed:', error);
             }
         }
 
-        // Step 2: Asynchronous initialization of all audio components
         async function initializeAudio() {
             if (isAudioInitialized) return;
             try {
-                await Tone.loaded(); // Ensure Tone.js is fully ready
+                await Tone.loaded();
+                const isLowPerf = performanceLevel === 'low';
+                // Use less expensive reverb on low-end devices
+                masterReverb = isLowPerf ? new Tone.Freeverb(0.8, 3000).toDestination() : new Tone.Reverb(4).toDestination();
+                if (!isLowPerf) {
+                    masterReverb.wet.value = 0.6;
+                    await masterReverb.ready;
+                }
                 
-                const mobileBoost = isLowEndDevice ? 12 : 0;
-
-                masterReverb = new Tone.Reverb(4).toDestination();
-                masterReverb.wet.value = 0.6;
-                await masterReverb.ready;
                 masterChorus = new Tone.Chorus(2, 2.5, 0.7).connect(masterReverb);
-
-                droneSynth = new Tone.FMSynth({ volume: -24 + mobileBoost, harmonicity: 0.5, modulationIndex: 10, envelope: { attack: 4, release: 4 }, modulationEnvelope: { attack: 4, release: 4 } }).connect(masterChorus);
-                const arpFilter = new Tone.AutoFilter("8n").start();
-                const arpSynth = new Tone.MonoSynth({ volume: -12 + mobileBoost, oscillator: { type: "sawtooth" }, filter: { Q: 2, type: "lowpass", rolloff: -24 }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.1 } }).connect(arpFilter).connect(masterChorus);
+                droneSynth = new Tone.FMSynth({ volume: -24, harmonicity: 0.5, modulationIndex: 10, envelope: { attack: 4, release: 4 }, modulationEnvelope: { attack: 4, release: 4 } }).connect(masterChorus);
+                const arpSynth = new Tone.MonoSynth({ volume: -12, oscillator: { type: "sawtooth" }, filter: { Q: 2, type: "lowpass", rolloff: -24 }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.1 } }).connect(masterChorus);
                 arp = new Tone.Pattern((time, note) => { arpSynth.triggerAttackRelease(note, "16n", time); }, ["C2", "Eb2", "G2", "Bb2"], "up");
                 arp.interval = "16n";
                 padFilter = new Tone.Filter(400, "lowpass").connect(masterChorus);
-                padSynth = new Tone.PolySynth(Tone.FMSynth, { volume: -18 + mobileBoost, harmonicity: 1.5, modulationIndex: 5, envelope: { attack: 3, release: 5 } }).connect(padFilter);
-                disintegrateNoise = new Tone.NoiseSynth({ volume: -20 + mobileBoost, noise: { type: 'white' }, envelope: { attack: 0.01, decay: 1.5, sustain: 0 } }).connect(masterReverb);
-                climaxChime = new Tone.MetalSynth({ volume: -10 + mobileBoost, frequency: 300, envelope: { attack: 0.001, decay: 1.4, release: 0.2 }, harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5 }).connect(masterReverb);
+                padSynth = new Tone.PolySynth(Tone.FMSynth, { volume: -18, harmonicity: 1.5, modulationIndex: 5, envelope: { attack: 3, release: 5 } }).connect(padFilter);
+                disintegrateNoise = new Tone.NoiseSynth({ volume: -20, noise: { type: 'white' }, envelope: { attack: 0.01, decay: 1.5, sustain: 0 } }).connect(masterReverb);
+                climaxChime = new Tone.MetalSynth({ volume: -10, frequency: 300, envelope: { attack: 0.001, decay: 1.4, release: 0.2 }, harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5 }).connect(masterReverb);
                 const cinematicDelay = new Tone.FeedbackDelay("8n", 0.4).connect(masterChorus);
                 cinematicDelay.wet.value = 0.7;
-                const cinematicChorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.8, spread: 180 }).connect(cinematicDelay);
-                const cinematicFilter = new Tone.Filter({ type: "lowpass", frequency: 2000, Q: 1.4 }).connect(cinematicChorus);
-                cinematicLead = new Tone.DuoSynth({ volume: -20 + mobileBoost, vibratoAmount: 0.2, vibratoRate: 4, harmonicity: 1.5, voice0: { oscillator: { type: 'sawtooth' }, envelope: { attack: 2.5, release: 3.5 }, filter: { Q: 2, type: 'lowpass' } }, voice1: { oscillator: { type: 'pulse', width: 0.3 }, envelope: { attack: 3.0, release: 4.0 }, filter: { Q: 1.5, type: 'lowpass' } } }).connect(cinematicFilter);
-
+                cinematicLead = new Tone.DuoSynth({ volume: -20, vibratoAmount: 0.2, vibratoRate: 4, harmonicity: 1.5, voice0: { oscillator: { type: 'sawtooth' }, envelope: { attack: 2.5, release: 3.5 }, filter: { Q: 2, type: 'lowpass' } }, voice1: { oscillator: { type: 'pulse', width: 0.3 }, envelope: { attack: 3.0, release: 4.0 }, filter: { Q: 1.5, type: 'lowpass' } } }).connect(cinematicDelay);
                 isAudioInitialized = true;
                 console.log('Audio components initialized.');
             } catch (error) {
@@ -990,6 +1020,7 @@
             await initSextantCube();
             await createForegroundParticles();
             setupEventListeners();
+            applyAdaptiveSettings(); // Apply initial settings
             animate();
             document.getElementById('start-overlay').classList.add('ready');
         }
@@ -1001,14 +1032,13 @@
             canvas.width = canvasSize;
             canvas.height = canvasSize;
             
-            // FIX: Restore original desktop size, keep mobile size optimized
             let fontSize, scaleFactor;
-            if (isLowEndDevice) {
+            if (performanceLevel === 'low') {
                 fontSize = 120;
                 scaleFactor = 0.0375;
             } else {
-                fontSize = 200; // Original desktop font size
-                scaleFactor = 0.08; // Original desktop scale factor
+                fontSize = 200;
+                scaleFactor = 0.08;
             }
             
             ctx.font = `bold ${fontSize}px "ivypresto-display", serif`;
@@ -1018,7 +1048,7 @@
             ctx.fillText(TITLE_TEXT, canvasSize / 2, canvasSize / 2);
             const imageData = ctx.getImageData(0, 0, canvasSize, canvasSize);
             const points = [];
-            const density = 4;
+            const density = performanceLevel === 'low' ? 6 : 4; // Use lower density for low perf
             for (let y = 0; y < canvasSize; y += density) {
                 for (let x = 0; x < canvasSize; x += density) {
                     if (imageData.data[(y * canvasSize + x) * 4 + 3] > 128) {
@@ -1032,40 +1062,25 @@
         async function initSextantCube() {
             const canvas = document.getElementById('sextant-cube-canvas');
             if (!canvas) return;
-
             const size = 40;
             sextantCubeScene = new THREE.Scene();
             sextantCubeCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
             sextantCubeCamera.position.z = 3;
-
-            sextantCubeRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !isLowEndDevice, alpha: true });
+            sextantCubeRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: performanceLevel !== 'low', alpha: true });
             sextantCubeRenderer.setSize(size, size);
             sextantCubeRenderer.setPixelRatio(window.devicePixelRatio);
-
-            const particleCount = isLowEndDevice ? 1500 : 2500;
+            const particleCount = performanceLevel === 'low' ? 1000 : 2500;
             const geometry = new THREE.BufferGeometry();
             const positions = new Float32Array(particleCount * 3);
-            const color1 = new THREE.Color(0.06, 0.73, 0.51);
-            const color2 = new THREE.Color(0.66, 0.33, 0.98);
-
             for (let i = 0; i < particleCount; i++) {
                 const edge = Math.floor(Math.random() * 12);
                 let x, y, z;
                 const t = Math.random();
-                switch(edge) {
-                    case 0: x=t*2-1; y=-1; z=-1; break; case 1: x=t*2-1; y=1; z=-1; break;
-                    case 2: x=t*2-1; y=-1; z=1; break; case 3: x=t*2-1; y=1; z=1; break;
-                    case 4: x=-1; y=t*2-1; z=-1; break; case 5: x=1; y=t*2-1; z=-1; break;
-                    case 6: x=-1; y=t*2-1; z=1; break; case 7: x=1; y=t*2-1; z=1; break;
-                    case 8: x=-1; y=-1; z=t*2-1; break; case 9: x=1; y=-1; z=t*2-1; break;
-                    case 10: x=-1; y=1; z=t*2-1; break; case 11: x=1; y=1; z=t*2-1; break;
-                    default: x=0; y=0; z=0;
-                }
-                positions.set([x, y, z], i * 3);
+                switch(edge){case 0:x=t*2-1;y=-1;z=-1;break;case 1:x=t*2-1;y=1;z=-1;break;case 2:x=t*2-1;y=-1;z=1;break;case 3:x=t*2-1;y=1;z=1;break;case 4:x=-1;y=t*2-1;z=-1;break;case 5:x=1;y=t*2-1;z=-1;break;case 6:x=-1;y=t*2-1;z=1;break;case 7:x=1;y=t*2-1;z=1;break;case 8:x=-1;y=-1;z=t*2-1;break;case 9:x=1;y=-1;z=t*2-1;break;case 10:x=-1;y=1;z=t*2-1;break;case 11:x=1;y=1;z=t*2-1;break;default:x=0;y=0;z=0;}
+                positions.set([x,y,z], i*3);
             }
-
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            const material = new THREE.PointsMaterial({ size: 1.5, color: color1.lerp(color2, Math.random()), blending: THREE.NormalBlending, transparent: true, opacity: 0.6 });
+            const material = new THREE.PointsMaterial({ size: 1.5, color: 0x10b981, blending: THREE.NormalBlending, transparent: true, opacity: 0.6 });
             sextantCube = new THREE.Points(geometry, material);
             sextantCubeScene.add(sextantCube);
         }
@@ -1073,46 +1088,47 @@
         function initForegroundScene() {
             fgScene = new THREE.Scene();
             fgCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            fgCamera.position.z = 100; // FIELD_RADIUS
+            fgCamera.position.z = 100;
             const canvas = document.getElementById('foreground-canvas');
-            fgRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !isLowEndDevice, alpha: true });
+            fgRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: performanceLevel !== 'low', alpha: true });
             fgRenderer.setSize(window.innerWidth, window.innerHeight);
-            fgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             fgComposer = new THREE.EffectComposer(fgRenderer);
             fgComposer.addPass(new THREE.RenderPass(fgScene, fgCamera));
-            bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.6, 0.5, 0.8);
-            fgComposer.addPass(bloomPass);
+            // FIX: Tweak bloom and disable on low performance tier
+            if (performanceLevel !== 'low') {
+                bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.5, 0.1);
+                fgComposer.addPass(bloomPass);
+            }
         }
 
         function initBackgroundScene() {
             bgScene = new THREE.Scene();
             bgCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             bgCamera.position.z = 2;
-            bgRenderer = new THREE.WebGLRenderer({ canvas: document.getElementById('background-canvas'), antialias: !isLowEndDevice, alpha: true });
+            bgRenderer = new THREE.WebGLRenderer({ canvas: document.getElementById('background-canvas'), antialias: performanceLevel !== 'low', alpha: true });
             bgRenderer.setSize(window.innerWidth, window.innerHeight);
-            bgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            
-            const pCount = getAdaptiveParticleCount(isLowEndDevice ? 30000 : 50000);
+            const pCount = getAdaptiveParticleCount(50000);
             const geometry = new THREE.BufferGeometry();
             const pos = new Float32Array(pCount * 3);
             for (let i = 0; i < pCount; i++) {
-                const r = Math.random() * 30;
-                const a = Math.random() * Math.PI * 2;
+                const r = Math.random() * 30, a = Math.random() * Math.PI * 2;
                 pos.set([r * Math.cos(a), r * Math.sin(a), (Math.random() - .5) * 12], i * 3);
             }
             geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-            const material = new THREE.ShaderMaterial({ vertexShader: backgroundVertexShader, fragmentShader: backgroundFragmentShader, uniforms: { uTime: { value: 0 } }, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false });
+            const material = new THREE.ShaderMaterial({ vertexShader: backgroundVertexShader, fragmentShader: backgroundFragmentShader, uniforms: { uTime: { value: 0 }, uPerformance: { value: 1.0 } }, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false });
             bgRippleVisual = new THREE.Points(geometry, material);
             bgScene.add(bgRippleVisual);
             bgComposer = new THREE.EffectComposer(bgRenderer);
             bgComposer.addPass(new THREE.RenderPass(bgScene, bgCamera));
-            const secretBloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.3, 0.5, 0.1);
-            bgComposer.addPass(secretBloomPass);
+            if (performanceLevel === 'high') { // Only use extra bloom on high-end
+                const secretBloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.3, 0.5, 0.1);
+                bgComposer.addPass(secretBloomPass);
+            }
         }
 
         async function createForegroundParticles() {
             const textPoints = await getTextPoints();
-            const particleCount = getAdaptiveParticleCount(isLowEndDevice ? 20000 : 70000);
+            const particleCount = getAdaptiveParticleCount(80000);
             const geometry = new THREE.BufferGeometry();
             const positions = new Float32Array(particleCount * 3);
             const targetPositions = new Float32Array(particleCount * 3);
@@ -1123,7 +1139,7 @@
             const isTextParticle = new Float32Array(particleCount);
             const color1 = new THREE.Color("#4338ca"), color2 = new THREE.Color("#a855f7"), color3 = new THREE.Color("#10b981");
             const textParticleIndices = new Set();
-            while (textParticleIndices.size < textPoints.length * 2 && textParticleIndices.size < particleCount / 3) {
+            while (textParticleIndices.size < textPoints.length && textParticleIndices.size < particleCount) {
                 textParticleIndices.add(Math.floor(Math.random() * particleCount));
             }
             for (let i = 0; i < particleCount; i++) {
@@ -1150,44 +1166,23 @@
             geometry.setAttribute('aRandomness', new THREE.BufferAttribute(randomness, 1));
             geometry.setAttribute('aIsTextParticle', new THREE.BufferAttribute(isTextParticle, 1));
             geometry.setAttribute('aTextTargetPosition', new THREE.BufferAttribute(textTargetPositions, 3));
-            const material = new THREE.ShaderMaterial({ vertexShader: foregroundVertexShader, fragmentShader: foregroundFragmentShader, uniforms: { uTime: { value: 0 }, uExpansionProgress: { value: 0.0 }, uConvergenceProgress: { value: 0.0 }, uDisintegrationProgress: { value: 0.0 }, uDisperse: { value: 0.0 }, uFieldRadius: { value: 100 } }, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+            const material = new THREE.ShaderMaterial({ vertexShader: foregroundVertexShader, fragmentShader: foregroundFragmentShader, uniforms: { uTime: { value: 0 }, uExpansionProgress: { value: 0.0 }, uConvergenceProgress: { value: 0.0 }, uDisintegrationProgress: { value: 0.0 }, uDisperse: { value: 0.0 }, uFieldRadius: { value: 100 }, uPerformance: { value: 1.0 } }, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
             fgParticles = new THREE.Points(geometry, material);
             fgScene.add(fgParticles);
         }
 
         function setupEventListeners() {
             window.addEventListener('resize', debounce(onWindowResize, 200), false);
-            
             const startOverlay = document.getElementById('start-overlay');
             startOverlay.addEventListener('click', () => {
                 startOverlay.style.opacity = '0';
                 startOverlay.style.pointerEvents = 'none';
-                
-                // --- ROBUST AUDIO FLOW ---
-                // 1. Synchronously unlock audio context on the first user gesture.
                 unlockAudio();
-                
-                // 2. Asynchronously initialize all audio nodes.
-                initializeAudio().then(() => {
-                    // 3. Once initialized, schedule and start the audio sequence.
-                    if (isAudioInitialized) {
-                        scheduleAudioSequence();
-                        Tone.Transport.start();
-                    }
-                });
-
-                // 4. Start visual sequence immediately, not waiting for audio.
+                initializeAudio().then(() => { if (isAudioInitialized) { scheduleAudioSequence(); Tone.Transport.start(); } });
                 runOpeningSequence();
                 document.getElementById('mute-button').classList.add('visible');
-
             }, { once: true });
-
-            document.getElementById('mute-button').addEventListener('click', () => {
-                if (!isAudioInitialized) return;
-                Tone.Master.mute = !Tone.Master.mute;
-                document.getElementById('mute-button').className = Tone.Master.mute ? 'muted visible' : 'unmuted visible';
-            });
-
+            document.getElementById('mute-button').addEventListener('click', () => { if (isAudioInitialized) { Tone.Master.mute = !Tone.Master.mute; document.getElementById('mute-button').className = Tone.Master.mute ? 'muted visible' : 'unmuted visible'; } });
             document.getElementById('password-form').addEventListener('submit', (e) => { e.preventDefault(); checkPassword(); });
             document.getElementById('password-input').addEventListener('input', handleTyping);
             window.addEventListener('keydown', handleKeyDown);
@@ -1197,210 +1192,63 @@
             document.addEventListener('click', () => { document.getElementById('hint-tooltip').classList.remove('visible'); });
         }
 
-        function handleKeyDown(e) {
-            if (isTransitioning || activeScene !== 'title') return;
-            keysPressed.add(e.code);
-            if (keysPressed.has('KeyS') && keysPressed.has('Digit1') && keysPressed.has('Digit0')) {
-                isTransitioning = true;
-                transitionToSecretPage();
-            }
-        }
+        function handleKeyDown(e) { if (!isTransitioning && activeScene === 'title') { keysPressed.add(e.code); if (keysPressed.has('KeyS') && keysPressed.has('Digit1') && keysPressed.has('Digit0')) { isTransitioning = true; transitionToSecretPage(); } } }
         function handleKeyUp(e) { keysPressed.delete(e.code); }
-        function handleTouchStart() {
-            if (isTransitioning || activeScene !== 'title') return;
-            clearTimeout(tapTimer);
-            tapCount++;
-            if (tapCount >= 7) {
-                isTransitioning = true;
-                transitionToSecretPage();
-            } else {
-                tapTimer = setTimeout(() => { tapCount = 0; }, 500); 
-            }
-        }
+        function handleTouchStart() { if (!isTransitioning && activeScene === 'title') { clearTimeout(tapTimer); tapCount++; if (tapCount >= 7) { isTransitioning = true; transitionToSecretPage(); } else { tapTimer = setTimeout(() => { tapCount = 0; }, 500); } } }
 
         function transitionToSecretPage() {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
             window.addEventListener('touchstart', handleTouchStart);
-
-            const tl = gsap.timeline({
-                onComplete: () => {
-                    // Cleanup foreground scene for performance
-                    if (fgParticles) {
-                        fgParticles.geometry.dispose();
-                        fgParticles.material.dispose();
-                        fgScene.remove(fgParticles);
-                        fgParticles = null;
-                    }
-                    if (fgRenderer) {
-                        fgRenderer.dispose();
-                        fgRenderer.domElement.style.display = 'none';
-                    }
-                    if (window.gc) window.gc(); // Hint for garbage collection
-                }
-            });
-
-            if (isAudioInitialized) {
-                Tone.Transport.stop();
-                Tone.Transport.cancel();
-                droneSynth.volume.rampTo(-Infinity, 2);
-                padSynth.volume.rampTo(-Infinity, 2);
-                cinematicLead.volume.rampTo(-Infinity, 2);
-                arp.stop();
-            }
+            const tl = gsap.timeline({ onComplete: () => { if (fgParticles) { fgParticles.geometry.dispose(); fgParticles.material.dispose(); fgScene.remove(fgParticles); fgParticles = null; } if (fgRenderer) { fgRenderer.dispose(); fgRenderer.domElement.style.display = 'none'; } if (window.gc) window.gc(); } });
+            if (isAudioInitialized) { Tone.Transport.stop(); Tone.Transport.cancel(); droneSynth.volume.rampTo(-Infinity, 2); padSynth.volume.rampTo(-Infinity, 2); cinematicLead.volume.rampTo(-Infinity, 2); arp.stop(); }
             document.getElementById('mute-button').classList.remove('visible');
-
             tl.to(fgParticles.material.uniforms.uDisperse, { value: 15.0, duration: 1.5, ease: "power4.in" }, 0);
             tl.to([document.getElementById('riddle-overlay'), document.getElementById('foreground-canvas-container')], { duration: 2.0, opacity: 0, filter: "blur(20px)", scale: 1.1, ease: "power3.inOut" }, 0.5);
-            tl.to(fgCamera.position, { z: 100 * 0.3, duration: 2.0, ease: "power2.inOut" }, 0.5);
-            
-            tl.call(() => {
-                activeScene = 'secret';
-                startTextAnimation();
-                document.getElementById('riddle-overlay').classList.remove('visible');
-                document.getElementById('foreground-canvas-container').classList.add('hidden');
-            }, null, 2.5);
-
+            tl.to(fgCamera.position, { z: 30, duration: 2.0, ease: "power2.inOut" }, 0.5);
+            tl.call(() => { activeScene = 'secret'; startTextAnimation(); document.getElementById('riddle-overlay').classList.remove('visible'); document.getElementById('foreground-canvas-container').classList.add('hidden'); }, null, 2.5);
             tl.to(document.getElementById('background-canvas-container'), { duration: 2.5, opacity: 1, ease: "power3.out" }, 2.5);
-            tl.fromTo(document.getElementById('animated-text-container'), { opacity: 0, y: 50, scale: 0.9 }, { opacity: 1, y: 0, scale: 1, duration: 1.5, ease: "back.out(1.7)", onStart: () => { document.getElementById('animated-text-container').classList.add('visible'); } }, 3.5);
+            tl.fromTo(document.getElementById('animated-text-container'), { opacity: 0, y: 50, scale: 0.9 }, { opacity: 1, y: 0, scale: 1, duration: 1.5, ease: "back.out(1.7)", onStart: () => document.getElementById('animated-text-container').classList.add('visible') }, 3.5);
             tl.call(() => { document.getElementById('social-links-container').classList.add('visible'); document.getElementById('footer-elements').classList.add('visible'); }, null, 4.0);
             tl.fromTo("#social-links-container a", { opacity: 0, y: 30, scale: 0.8 }, { opacity: 1, y: 0, scale: 1, duration: 0.8, stagger: 0.15, ease: "back.out(1.7)" }, 4.0);
             tl.fromTo(["#contact-link", "#rights-text"], { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 1.0, stagger: 0.2, ease: "power2.out" }, 4.5);
         }
 
-        function handleTyping(e) {
-            if (isTransitioning) return;
-            const currentInput = e.target.value.toUpperCase();
-            const matchCount = (currentInput.match(/^L?I?M?I?N?A?L?/) || [''])[0].length;
-            gsap.to(visualFeedback, { glow: (matchCount / "LIMINAL".length) * 0.6, duration: 0.5, ease: 'power2.out' });
-            if (CORRECT_PASSWORDS.includes(currentInput)) checkPassword(true);
-        }
-        
-        function checkPassword(isAutoTrigger = false) {
-            if (isTransitioning) return;
-            const passwordInput = document.getElementById('password-input');
-            if (isAutoTrigger || CORRECT_PASSWORDS.includes(passwordInput.value.toUpperCase().trim())) {
-                isTransitioning = true; 
-                passwordInput.blur();
-                gsap.to(visualFeedback, { glow: 1.5, duration: 0.5, ease: 'power2.out' });
-                transitionToSecretPage();
-            } else {
-                const form = document.getElementById('password-form');
-                form.classList.add('error');
-                passwordInput.value = '';
-                setTimeout(() => form.classList.remove('error'), 500);
-                gsap.to(visualFeedback, { disperse: 5.0, duration: 0.75, ease: 'elastic.out(1, 0.5)', onComplete: () => gsap.to(visualFeedback, {disperse: 0, duration: 0.5}) });
-            }
-        }
-        
-        function startTextAnimation() {
-            const textElement = document.getElementById('animated-text');
-            const dateLeftElement = document.getElementById('event-date-left');
-            const dateRightElement = document.getElementById('event-date-right');
-            if (!textElement || !dateLeftElement || !dateRightElement) return;
-            
-            textElement.textContent = "SURFACE TENSION";
-            const eventTitle = encodeURIComponent("SURFACE TENSION - DIGITAL DRIP AT SEXTANT");
-            const eventLocation = encodeURIComponent("539 Valencia Street, San Francisco, CA");
-            const eventDetails = encodeURIComponent("Experience the intersection of digital art and specialty coffee. An immersive art showcase from 5:00 PM to 6:30 PM, transitioning into a vibrant rave space with a live DJ set at 7 PM.");
-            const calendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${eventTitle}&dates=20250726T170000/20250726T220000&location=${eventLocation}&details=${eventDetails}`;
-            dateLeftElement.innerHTML = `<a href="${calendarUrl}" target="_blank" rel="noopener noreferrer">JULY 26TH, 2025</a>`;
-            dateRightElement.innerHTML = `<a href="${calendarUrl}" target="_blank" rel="noopener noreferrer">5:00PM</a>`;
-
-            gsap.timeline({repeat: -1, repeatDelay: 2.5})
-                .to("#flicker-text", { duration: 0.1, opacity: 0.3, textShadow: '0 0 20px #10b981' })
-                .to("#flicker-text", { duration: 0.05, opacity: 1 })
-                .to("#flicker-text", { duration: 0.05, opacity: 0.5, delay: 0.2 })
-                .to("#flicker-text", { duration: 0.05, opacity: 1 })
-                .to("#flicker-text", { duration: 0.1, opacity: 0.2, delay: 0.5 })
-                .to("#flicker-text", { duration: 0.2, opacity: 1, textShadow: '0 0 10px #10b981' });
-        }
-        
-        function scheduleAudioSequence() {
-            const now = Tone.now();
-            Tone.Transport.bpm.value = 110;
-            droneSynth.triggerAttack("C1", now);
-            const audioStartTime = now + 1.5;
-            const chordProgression = [{ time: "0:0", note: "Cm" }, { time: "1:0", note: "Gm" }, { time: "2:0", note: "Fm" }, { time: "3:0", note: "Cm" }];
-            new Tone.Part((time, value) => {
-                let chord, arpNotes;
-                if (value.note === "Cm") { chord = ["C3", "Eb3", "G3"]; arpNotes = ["C2", "Eb2", "G2", "C3"]; }
-                else if (value.note === "Gm") { chord = ["G3", "Bb3", "D4"]; arpNotes = ["G2", "Bb2", "D3", "G3"]; }
-                else { chord = ["F3", "Ab3", "C4"]; arpNotes = ["F2", "Ab2", "C3", "F3"]; }
-                padSynth.triggerAttackRelease(chord, "1m", time);
-                arp.values = arpNotes;
-            }, chordProgression).start(audioStartTime);
-            arp.start(audioStartTime);
-            new Tone.Sequence((time, note) => { if (note) cinematicLead.triggerAttackRelease(note, '2n', time); }, [null, null, 'C4', null, 'Eb4', null, 'G4', null, 'Bb4', null, 'G4', 'F4', 'Eb4', null, 'C4', null], '2n').start(now + 6.5);
-            padSynth.volume.rampTo(-18, 0.1, audioStartTime);
-            if (padFilter) padFilter.frequency.rampTo(4000, 7, now + 2.0);
-            Tone.Transport.scheduleOnce((t) => climaxChime.triggerAttack(t), 4.0);
-            Tone.Transport.scheduleOnce((t) => disintegrateNoise.triggerAttack(t), 13.5);
-            Tone.Transport.scheduleOnce((t) => {
-                padSynth.volume.rampTo(-Infinity, 4, t);
-                cinematicLead.volume.rampTo(-Infinity, 5, t);
-                arp.stop(t + 3);
-                droneSynth.volume.rampTo(-Infinity, 6, t + 0.5);
-                Tone.Transport.stop(t + 8);
-            }, now + 16.0);
-        }
-
-        function runOpeningSequence() {
-            const tl = gsap.timeline();
-            tl.to(document.getElementById('background-canvas-container'), { opacity: 0.5, duration: 8, ease: 'power2.out' }, "start");
-            tl.to(fgParticles.material.uniforms.uExpansionProgress, { value: 1.0, duration: 6, ease: 'power3.out' }, "start");
-            tl.to(fgParticles.material.uniforms.uConvergenceProgress, { value: 1.0, duration: 8.5, ease: 'power2.inOut' }, "start+=4.0");
-            tl.to(fgParticles.material.uniforms.uDisintegrationProgress, { value: 1.0, duration: 3.5, ease: 'power2.in' }, "start+=13.5");
-            tl.to(document.getElementById('riddle-overlay'), { opacity: 1, duration: 1.5, ease: 'power2.out', onStart: () => { document.getElementById('riddle-overlay').classList.add('visible'); } }, ">-1.0");
-        }
-        
-        function onWindowResize() {
-            const width = window.innerWidth, height = window.innerHeight;
-            fgCamera.aspect = width / height;
-            fgCamera.updateProjectionMatrix();
-            fgRenderer.setSize(width, height);
-            fgComposer.setSize(width, height);
-            bgCamera.aspect = width / height;
-            bgCamera.updateProjectionMatrix();
-            bgRenderer.setSize(width, height);
-            bgComposer.setSize(width, height);
-            applyAdaptiveSettings(); // Re-apply quality settings on resize
-        }
+        function handleTyping(e) { if (isTransitioning) return; const currentInput = e.target.value.toUpperCase(); const matchCount = (currentInput.match(/^L?I?M?I?N?A?L?/) || [''])[0].length; gsap.to(visualFeedback, { glow: (matchCount / 7) * 0.6, duration: 0.5, ease: 'power2.out' }); if (CORRECT_PASSWORDS.includes(currentInput)) checkPassword(true); }
+        function checkPassword(isAutoTrigger = false) { if (isTransitioning) return; const passwordInput = document.getElementById('password-input'); if (isAutoTrigger || CORRECT_PASSWORDS.includes(passwordInput.value.toUpperCase().trim())) { isTransitioning = true; passwordInput.blur(); gsap.to(visualFeedback, { glow: 1.5, duration: 0.5, ease: 'power2.out' }); transitionToSecretPage(); } else { const form = document.getElementById('password-form'); form.classList.add('error'); passwordInput.value = ''; setTimeout(() => form.classList.remove('error'), 500); gsap.to(visualFeedback, { disperse: 5.0, duration: 0.75, ease: 'elastic.out(1, 0.5)', onComplete: () => gsap.to(visualFeedback, {disperse: 0, duration: 0.5}) }); } }
+        function startTextAnimation() { const textElement = document.getElementById('animated-text'); const dateLeftElement = document.getElementById('event-date-left'); const dateRightElement = document.getElementById('event-date-right'); if (!textElement || !dateLeftElement || !dateRightElement) return; textElement.textContent = "SURFACE TENSION"; const eventTitle = encodeURIComponent("SURFACE TENSION - DIGITAL DRIP AT SEXTANT"); const eventLocation = encodeURIComponent("539 Valencia Street, San Francisco, CA"); const eventDetails = encodeURIComponent("Experience the intersection of digital art and specialty coffee. An immersive art showcase from 5:00 PM to 6:30 PM, transitioning into a vibrant rave space with a live DJ set at 7 PM."); const calendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${eventTitle}&dates=20250726T170000/20250726T220000&location=${eventLocation}&details=${eventDetails}`; dateLeftElement.innerHTML = `<a href="${calendarUrl}" target="_blank" rel="noopener noreferrer">JULY 26TH, 2025</a>`; dateRightElement.innerHTML = `<a href="${calendarUrl}" target="_blank" rel="noopener noreferrer">5:00PM</a>`; gsap.timeline({repeat: -1, repeatDelay: 2.5}).to("#flicker-text", { duration: 0.1, opacity: 0.3, textShadow: '0 0 20px #10b981' }).to("#flicker-text", { duration: 0.05, opacity: 1 }).to("#flicker-text", { duration: 0.05, opacity: 0.5, delay: 0.2 }).to("#flicker-text", { duration: 0.05, opacity: 1 }).to("#flicker-text", { duration: 0.1, opacity: 0.2, delay: 0.5 }).to("#flicker-text", { duration: 0.2, opacity: 1, textShadow: '0 0 10px #10b981' }); }
+        function scheduleAudioSequence() { const now = Tone.now(); Tone.Transport.bpm.value = 110; droneSynth.triggerAttack("C1", now); const audioStartTime = now + 1.5; const chordProgression = [{ time: "0:0", note: "Cm" }, { time: "1:0", note: "Gm" }, { time: "2:0", note: "Fm" }, { time: "3:0", note: "Cm" }]; new Tone.Part((time, value) => { let chord, arpNotes; if (value.note === "Cm") { chord = ["C3", "Eb3", "G3"]; arpNotes = ["C2", "Eb2", "G2", "C3"]; } else if (value.note === "Gm") { chord = ["G3", "Bb3", "D4"]; arpNotes = ["G2", "Bb2", "D3", "G3"]; } else { chord = ["F3", "Ab3", "C4"]; arpNotes = ["F2", "Ab2", "C3", "F3"]; } padSynth.triggerAttackRelease(chord, "1m", time); arp.values = arpNotes; }, chordProgression).start(audioStartTime); arp.start(audioStartTime); new Tone.Sequence((time, note) => { if (note) cinematicLead.triggerAttackRelease(note, '2n', time); }, [null, null, 'C4', null, 'Eb4', null, 'G4', null, 'Bb4', null, 'G4', 'F4', 'Eb4', null, 'C4', null], '2n').start(now + 6.5); padSynth.volume.rampTo(-18, 0.1, audioStartTime); if (padFilter) padFilter.frequency.rampTo(4000, 7, now + 2.0); Tone.Transport.scheduleOnce((t) => climaxChime.triggerAttack(t), 4.0); Tone.Transport.scheduleOnce((t) => disintegrateNoise.triggerAttack(t), 13.5); Tone.Transport.scheduleOnce((t) => { padSynth.volume.rampTo(-Infinity, 4, t); cinematicLead.volume.rampTo(-Infinity, 5, t); arp.stop(t + 3); droneSynth.volume.rampTo(-Infinity, 6, t + 0.5); Tone.Transport.stop(t + 8); }, now + 16.0); }
+        function runOpeningSequence() { const tl = gsap.timeline(); tl.to(document.getElementById('background-canvas-container'), { opacity: 0.5, duration: 8, ease: 'power2.out' }, "start"); tl.to(fgParticles.material.uniforms.uExpansionProgress, { value: 1.0, duration: 6, ease: 'power3.out' }, "start"); tl.to(fgParticles.material.uniforms.uConvergenceProgress, { value: 1.0, duration: 8.5, ease: 'power2.inOut' }, "start+=4.0"); tl.to(fgParticles.material.uniforms.uDisintegrationProgress, { value: 1.0, duration: 3.5, ease: 'power2.in' }, "start+=13.5"); tl.to(document.getElementById('riddle-overlay'), { opacity: 1, duration: 1.5, ease: 'power2.out', onStart: () => { document.getElementById('riddle-overlay').classList.add('visible'); } }, ">-1.0"); }
+        function onWindowResize() { const width = window.innerWidth, height = window.innerHeight; fgCamera.aspect = width / height; fgCamera.updateProjectionMatrix(); fgRenderer.setSize(width, height); if(fgComposer) fgComposer.setSize(width, height); bgCamera.aspect = width / height; bgCamera.updateProjectionMatrix(); bgRenderer.setSize(width, height); if(bgComposer) bgComposer.setSize(width, height); applyAdaptiveSettings(); }
 
         let lastRenderTime = 0;
         function animate(now) {
             requestAnimationFrame(animate);
-            monitorPerformance(now);
-            
-            // --- VERCEL OPTIMIZATION: Less aggressive frame skipping for smoother perceived motion ---
-            const requiredElapsed = performanceLevel === 'low' ? 28 : 16; // ~35fps or ~60fps
-            if (now - lastRenderTime < requiredElapsed && now !== 0) {
+            if(performanceLevel === 'high') {
+                monitorPerformance(now);
+            }
+            const requiredElapsed = performanceLevel === 'low' ? 30 : 16;
+            if (now - lastRenderTime < requiredElapsed && now > 0) {
                 return;
             }
             lastRenderTime = now;
-
             const elapsedTime = clock.getElapsedTime();
-            
-            // Always render background, it's less expensive
             if (bgRippleVisual) {
                 bgRippleVisual.material.uniforms.uTime.value = elapsedTime;
                 bgRippleVisual.rotation.z += 3e-5 * adaptiveQuality;
-                bgComposer.render();
+                if(bgComposer) bgComposer.render(); else bgRenderer.render(bgScene, bgCamera);
             }
-
             if (activeScene === 'title' && fgParticles) {
                 fgParticles.material.uniforms.uTime.value = elapsedTime;
                 fgParticles.material.uniforms.uDisperse.value = visualFeedback.disperse;
-                fgComposer.render();
+                if(fgComposer) fgComposer.render(); else fgRenderer.render(fgScene, fgCamera);
             }
-            
             if (sextantCube && activeScene === 'secret') {
                 sextantCube.rotation.x += 0.01 * adaptiveQuality;
                 sextantCube.rotation.y += 0.015 * adaptiveQuality;
                 sextantCubeRenderer.render(sextantCubeScene, sextantCubeCamera);
             }
         }
-
         init();
     });
 
