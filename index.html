@@ -2,35 +2,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Surface Tension</title>
     
-    <!-- Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-V37GL8LNYT"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-V37GL8LNYT');
-    </script>
+    <!-- Vercel Analytics & Speed Insights are preserved -->
+    <script> window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); }; </script>
+    <script src="/_vercel/insights/script.js" defer></script>
+    <script> window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); }; </script>
+    <script src="/_vercel/speed-insights/script.js" defer></script>
     
-    <!-- Vercel Analytics -->
-    <script>
-        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-    </script>
-    <script src="/_vercel/insights/script.js"></script>
-    
-    <!-- Vercel Speed Insights -->
-    <script>
-        window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-    </script>
-    <script src="/_vercel/speed-insights/script.js"></script>
-    
-    <link rel="stylesheet" href="https://use.typekit.net/jhs3mli.css">
+    <!-- Font Loading Strategy for Performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://use.typekit.net/jhs3mli.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+
     <style>
+        /* --- CRITICAL CSS: Inlined for fastest first paint --- */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
             width: 100%;
@@ -39,6 +27,7 @@
             background-color: #000000;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            overscroll-behavior: none; /* Prevents pull-to-refresh on mobile */
         }
         .canvas-container {
             position: fixed;
@@ -49,13 +38,20 @@
             z-index: 1;
             transition: opacity 1.5s ease-in-out;
         }
+        #background-canvas-container {
+            z-index: 1;
+            opacity: 0; /* Starts hidden, will be faded in */
+        }
+        #foreground-canvas-container {
+            z-index: 2; /* Ensures this canvas is on top */
+        }
         .canvas-container.hidden {
             opacity: 0;
             pointer-events: none;
         }
         .overlay-container {
             position: fixed;
-            z-index: 2;
+            z-index: 3; /* Above all canvases */
             color: white;
             text-align: center;
             width: 100%;
@@ -68,6 +64,7 @@
             opacity: 0;
             pointer-events: none;
             transition: opacity 1.5s ease-in-out;
+            will-change: opacity; /* Performance hint */
         }
         .overlay-container.visible {
             opacity: 1;
@@ -508,18 +505,10 @@
             opacity: 1;
             transform: scale(1);
         }
-        #social-links-container a:nth-child(1):hover {
-            color: #E4405F;
-        }
-        #social-links-container a:nth-child(2):hover {
-            color: #1DA1F2;
-        }
-        #social-links-container a:nth-child(3):hover {
-            color: #00f2ea;
-        }
-        #social-links-container a:nth-child(4):hover {
-            color: #1877F2;
-        }
+        #social-links-container a:nth-child(1):hover { color: #E4405F; }
+        #social-links-container a:nth-child(2):hover { color: #1DA1F2; }
+        #social-links-container a:nth-child(3):hover { color: #00f2ea; }
+        #social-links-container a:nth-child(4):hover { color: #1877F2; }
         #social-links-container svg {
             width: 20px;
             height: 20px;
@@ -563,103 +552,42 @@
             color: #10b981;
             transform: translateY(-1px);
         }
-        #contact-link svg {
-            width: 14px;
-            height: 14px;
-        }
+        #contact-link svg { width: 14px; height: 14px; }
+        #rights-text { text-transform: uppercase; letter-spacing: 0.05em; }
         
-        #rights-text {
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        
-        /* Enhanced responsive adjustments for better mobile text */
+        /* --- Responsive Adjustments --- */
         @media (max-width: 768px) {
-            #animated-text {
-                font-size: clamp(2.4rem, 10vw, 5rem);
-                letter-spacing: 0.05em;
-                line-height: 1.1;
-                padding: 0 1rem;
-            }
-            #subtext {
-                font-size: clamp(0.95rem, 3vw, 1.2rem);
-            }
-            #event-date-container {
-                flex-direction: column;
-                gap: 0.25rem;
-                text-align: center;
-            }
-            .event-date-text {
-                font-size: clamp(1.2rem, 4vw, 1.6rem);
-            }
-            #ticket-button {
-                width: 260px;
-                height: 75px;
-                font-size: 1.1rem;
-            }
-            #social-links-container {
-                gap: 2.5rem;
-                bottom: 1rem;
-            }
-            #social-links-container svg {
-                width: 18px;
-                height: 18px;
-            }
-            #sextant-cube-container {
-                margin-top: 1.8rem;
-                gap: 0.5rem;
-            }
-            #sextant-cube-canvas {
-                width: 32px;
-                height: 32px;
-            }
-            #footer-elements {
-                flex-direction: column;
-                gap: 0.5rem;
-                padding: 0 1rem;
-                bottom: 0.3rem;
-            }
+            #animated-text { font-size: clamp(2.4rem, 10vw, 5rem); letter-spacing: 0.05em; line-height: 1.1; padding: 0 1rem; }
+            #subtext { font-size: clamp(0.95rem, 3vw, 1.2rem); }
+            #event-date-container { flex-direction: column; gap: 0.25rem; text-align: center; }
+            .event-date-text { font-size: clamp(1.2rem, 4vw, 1.6rem); }
+            #ticket-button { width: 260px; height: 75px; font-size: 1.1rem; }
+            #social-links-container { gap: 2.5rem; bottom: 1rem; }
+            #social-links-container svg { width: 18px; height: 18px; }
+            #sextant-cube-container { margin-top: 1.8rem; gap: 0.5rem; }
+            #sextant-cube-canvas { width: 32px; height: 32px; }
+            #footer-elements { flex-direction: column; gap: 0.5rem; padding: 0 1rem; bottom: 0.3rem; }
         }
         @media (max-height: 500px) {
-            #animated-text-container {
-                padding-bottom: 60px;
-            }
-            #social-links-container {
-                bottom: 0.5rem;
-            }
+            #animated-text-container { padding-bottom: 60px; }
+            #social-links-container { bottom: 0.5rem; }
         }
-        
-        /* Better mobile text optimization */
         @media (max-width: 480px) {
-            #animated-text {
-                font-size: clamp(2rem, 11vw, 4rem);
-                margin: 0.3rem 0;
-                padding: 0 0.5rem;
-            }
-            #ticket-button {
-                width: 240px;
-                height: 70px;
-                font-size: 1rem;
-            }
-            .event-date-text {
-                font-size: clamp(1rem, 5vw, 1.4rem);
-            }
+            #animated-text { font-size: clamp(2rem, 11vw, 4rem); margin: 0.3rem 0; padding: 0 0.5rem; }
+            #ticket-button { width: 240px; height: 70px; font-size: 1rem; }
+            .event-date-text { font-size: clamp(1rem, 5vw, 1.4rem); }
         }
-
     </style>
-    <!-- Library Loading -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FontLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/TextGeometry.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/MeshSurfaceSampler.js"></script>
+    <!-- Library Loading: Deferred for non-blocking rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js" defer></script>
 </head>
 <body>
     <div id="start-overlay">
@@ -672,13 +600,13 @@
         <svg id="unmuted-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /></svg>
         <svg id="muted-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /></svg>
     </button>
-
-    <div id="liminal-canvas-container" class="canvas-container">
-        <canvas id="liminal-canvas"></canvas>
-    </div>
     
-    <div id="particle-canvas-container" class="canvas-container hidden">
-        <canvas id="particle-canvas"></canvas>
+    <!-- OPTIMIZATION: Two canvases for layered visuals. Background ripple + foreground particles. -->
+    <div id="background-canvas-container" class="canvas-container">
+        <canvas id="background-canvas"></canvas>
+    </div>
+    <div id="foreground-canvas-container" class="canvas-container">
+        <canvas id="foreground-canvas"></canvas>
     </div>
     
     <div id="riddle-overlay" class="overlay-container">
@@ -722,214 +650,142 @@
     </div>
 
     <div id="social-links-container">
-        <a href="https://www.instagram.com/surfacetension.co" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.85s-.011 3.584-.069 4.85c-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07s-3.584-.012-4.85-.07c-3.252-.148-4.771-1.691-4.919-4.919-.058-1.265-.07-1.645-.07-4.85s.012-3.584.07-4.85c.148-3.225 1.664-4.771 4.919-4.919C8.416 2.175 8.796 2.163 12 2.163zm0 1.802c-3.143 0-3.505.012-4.73.068-2.693.123-3.995 1.424-4.118 4.118-.056 1.225-.068 1.586-.068 4.73s.012 3.505.068 4.73c.123 2.693 1.424 3.995 4.118 4.118 1.225.056 1.586.068 4.73.068s3.505-.012 4.73-.068c2.693-.123 3.995-1.424 4.118-4.118.056-1.225.068-1.586.068-4.73s-.012-3.505-.068-4.73c-.123-2.693-1.424-3.995-4.118-4.118-1.225-.056-1.586-.068-4.73-.068zm0 3.888c-2.402 0-4.35 1.948-4.35 4.35s1.948 4.35 4.35 4.35 4.35-1.948 4.35-4.35-1.948-4.35-4.35-4.35zm0 7.167c-1.553 0-2.817-1.264-2.817-2.817s1.264-2.817 2.817-2.817 2.817 1.264 2.817 2.817-1.264 2.817-2.817 2.817zm4.965-7.332c-.608 0-1.1.492-1.1 1.1s.492 1.1 1.1 1.1 1.1-.492 1.1-1.1-.492-1.1-1.1-1.1z"></path></svg>
-        </a>
-        <a href="https://www.twitter.com/surfacetensi_n" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
-            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
-        </a>
-        <a href="https://www.tiktok.com/@surfacetension.co" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
-        </a>
-        <a href="https://www.facebook.com/profile.php?id=61577915426183" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
-            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-        </a>
+        <a href="https://www.instagram.com/surfacetension.co" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.85s-.011 3.584-.069 4.85c-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07s-3.584-.012-4.85-.07c-3.252-.148-4.771-1.691-4.919-4.919-.058-1.265-.07-1.645-.07-4.85s.012-3.584.07-4.85c.148-3.225 1.664-4.771 4.919-4.919C8.416 2.175 8.796 2.163 12 2.163zm0 1.802c-3.143 0-3.505.012-4.73.068-2.693.123-3.995 1.424-4.118 4.118-.056 1.225-.068 1.586-.068 4.73s.012 3.505.068 4.73c.123 2.693 1.424 3.995 4.118 4.118 1.225.056 1.586.068 4.73.068s3.505-.012 4.73-.068c2.693-.123 3.995-1.424 4.118-4.118.056-1.225.068-1.586.068-4.73s-.012-3.505-.068-4.73c-.123-2.693-1.424-3.995-4.118-4.118-1.225-.056-1.586-.068-4.73-.068zm0 3.888c-2.402 0-4.35 1.948-4.35 4.35s1.948 4.35 4.35 4.35 4.35-1.948 4.35-4.35-1.948-4.35-4.35-4.35zm0 7.167c-1.553 0-2.817-1.264-2.817-2.817s1.264-2.817 2.817-2.817 2.817 1.264 2.817 2.817-1.264 2.817-2.817 2.817zm4.965-7.332c-.608 0-1.1.492-1.1 1.1s.492 1.1 1.1 1.1 1.1-.492 1.1-1.1-.492-1.1-1.1-1.1z"></path></svg></a>
+        <a href="https://www.twitter.com/surfacetensi_n" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg></a>
+        <a href="https://www.tiktok.com/@surfacetension.co" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg></a>
+        <a href="https://www.facebook.com/profile.php?id=61577915426183" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
     </div>
 
     <div id="footer-elements">
-        <a id="contact-link" href="mailto:connect.surfacetension@gmail.com">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-            </svg>
-            Contact Us
-        </a>
+        <a id="contact-link" href="mailto:connect.surfacetension@gmail.com"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>Contact Us</a>
         <div id="rights-text">All Rights Reserved</div>
     </div>
 
     <div id="copy-notification">Code Copied to Clipboard!</div>
 
-    <script>
+    <script type="module">
+    // Defer script execution until DOM is ready
     document.addEventListener('DOMContentLoaded', () => {
-        // -- Configuration --
+        // --- Configuration ---
         const TITLE_TEXT = "SURFACE TENSION";
         const CORRECT_PASSWORDS = ['LIMINAL', 'LIMINAL SPACE'];
 
-        // -- Global State --
+        // --- Global State ---
         const clock = new THREE.Clock();
         let activeScene = 'title';
         let isTransitioning = false;
         
-        // -- Performance Monitoring & Smart Rendering --
+        // --- Smart Performance Monitoring & Adaptive Quality ---
         let frameCount = 0;
-        let lastFPSCheck = 0;
-        let currentFPS = 60;
-        let adaptiveQuality = 1.0;
+        let lastFPSCheckTime = 0;
         let performanceLevel = 'high'; // high, medium, low
-        
-        // -- Scene Variables --
-        let scene, camera, renderer, particles, composer, bloomPass;
-        let particleScene, particleCamera, particleRenderer, particleComposer, backgroundVisual;
+        let adaptiveQuality = 1.0; // 0.5 (low) to 1.0 (high)
+
+        // --- Scene Variables ---
+        let fgScene, fgCamera, fgRenderer, fgComposer, fgParticles, bloomPass;
+        let bgScene, bgCamera, bgRenderer, bgComposer, bgRippleVisual;
         let sextantCubeScene, sextantCubeCamera, sextantCubeRenderer, sextantCube;
         
-        // -- Simplified Mobile Audio Management --
-        let audioInitialized = false;
-        let audioContext = null;
+        // --- Bulletproof Audio Management ---
+        let audioContext;
+        let isAudioUnlocked = false; // Tracks if user has interacted
+        let isAudioInitialized = false; // Tracks if Tone.js objects are created
         let droneSynth, arp, padSynth, disintegrateNoise, climaxChime, masterReverb, masterChorus, padFilter, cinematicLead;
 
         let visualFeedback = { disperse: 0, glow: 0 };
 
-        // -- Bypass State --
+        // --- Bypass State ---
         const keysPressed = new Set();
         let tapCount = 0;
         let tapTimer = null;
+        
+        // --- Device Capability Detection ---
+        const isLowEndDevice = (() => {
+            const ua = navigator.userAgent;
+            const isMobile = /Mobi|Android|iPhone/i.test(ua);
+            const screenArea = window.innerWidth * window.innerHeight;
+            const memory = navigator.deviceMemory || 2;
+            return isMobile || screenArea < 921600 || memory < 4; // 1280x720
+        })();
 
-        // -- Enhanced device capability detection --
-        function getDeviceCapabilities() {
-            const canvas = document.createElement('canvas');
-            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-            
-            const userAgent = navigator.userAgent;
-            const isIPhone = /iPhone/.test(userAgent);
-            const isIPad = /iPad/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-            const isAndroidPhone = /Android/.test(userAgent) && !/tablet/i.test(userAgent);
-            const isAndroidTablet = /Android/.test(userAgent) && /tablet/i.test(userAgent);
-            const isSafari = /Safari/.test(userAgent) && !/Chrome/.test(userAgent);
-            const isChrome = /Chrome/.test(userAgent);
-            const isArc = /Arc/.test(userAgent);
-            
-            const capabilities = {
-                maxTextureSize: gl ? gl.getParameter(gl.MAX_TEXTURE_SIZE) : 1024,
-                devicePixelRatio: window.devicePixelRatio,
-                screenWidth: window.innerWidth,
-                screenHeight: window.innerHeight,
-                isMobile: isIPhone || isAndroidPhone || 
-                         /webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent),
-                isTablet: isIPad || isAndroidTablet,
-                isIOS: isIPhone || isIPad,
-                isSafari: isSafari,
-                isChrome: isChrome,
-                isArc: isArc,
-                isTouchDevice: ('ontouchstart' in window) || 
-                              (navigator.maxTouchPoints > 0) || 
-                              (navigator.msMaxTouchPoints > 0),
-                isLowEnd: false,
-                memoryInfo: navigator.deviceMemory || 4,
-                hasAudioContext: !!(window.AudioContext || window.webkitAudioContext)
-            };
-            
-            capabilities.isLowEnd = capabilities.isMobile || 
-                                   capabilities.screenWidth < 768 || 
-                                   capabilities.devicePixelRatio < 1.5 ||
-                                   capabilities.maxTextureSize < 2048 ||
-                                   capabilities.memoryInfo < 4;
-            
-            return capabilities;
-        }
-
-        const DEVICE_CAPABILITIES = getDeviceCapabilities();
-
-        // Smart Performance Monitoring System
-        function monitorPerformance() {
+        // --- Smart Performance Monitoring System ---
+        function monitorPerformance(now) {
             frameCount++;
-            const now = performance.now();
-            
-            if (now - lastFPSCheck >= 1000) {
-                currentFPS = frameCount;
+            if (now - lastFPSCheckTime >= 1000) {
+                const currentFPS = frameCount;
                 frameCount = 0;
-                lastFPSCheck = now;
+                lastFPSCheckTime = now;
                 
-                // Adaptive quality adjustment based on performance
-                if (currentFPS < 45) {
-                    performanceLevel = 'low';
-                    adaptiveQuality = 0.7;
+                if (currentFPS < 40) {
+                    if (performanceLevel !== 'low') {
+                        performanceLevel = 'low';
+                        adaptiveQuality = 0.6;
+                        applyAdaptiveSettings();
+                    }
                 } else if (currentFPS < 55) {
-                    performanceLevel = 'medium';
-                    adaptiveQuality = 0.85;
+                    if (performanceLevel !== 'medium') {
+                        performanceLevel = 'medium';
+                        adaptiveQuality = 0.8;
+                        applyAdaptiveSettings();
+                    }
                 } else {
-                    performanceLevel = 'high';
-                    adaptiveQuality = 1.0;
-                }
-                
-                // Apply adaptive settings
-                if (renderer) {
-                    renderer.setPixelRatio(Math.min(window.devicePixelRatio * adaptiveQuality, 2));
-                }
-                if (particleRenderer) {
-                    particleRenderer.setPixelRatio(Math.min(window.devicePixelRatio * adaptiveQuality, 2));
+                    if (performanceLevel !== 'high') {
+                        performanceLevel = 'high';
+                        adaptiveQuality = 1.0;
+                        applyAdaptiveSettings();
+                    }
                 }
             }
         }
 
-        // Smart Particle Count with Performance Adaptation
-        function getAdaptiveParticleCount() {
-            const baseCount = getDynamicParticleCount();
-            
-            // Real-time adaptation based on performance
-            if (performanceLevel === 'low') {
-                return Math.floor(baseCount * 0.6);
-            } else if (performanceLevel === 'medium') {
-                return Math.floor(baseCount * 0.8);
-            }
-            return baseCount;
+        function applyAdaptiveSettings() {
+            const newPixelRatio = Math.min(window.devicePixelRatio * adaptiveQuality, 2);
+            if (fgRenderer) fgRenderer.setPixelRatio(newPixelRatio);
+            if (bgRenderer) bgRenderer.setPixelRatio(newPixelRatio);
+            if (bloomPass) bloomPass.strength = (0.6 + visualFeedback.glow) * adaptiveQuality;
         }
 
-        function debounce(func, wait, immediate) {
+        // --- Optimized Particle Count ---
+        function getAdaptiveParticleCount(baseCount) {
+             if (isLowEndDevice) {
+                return Math.floor(baseCount * 0.5);
+            }
+            return Math.floor(baseCount * adaptiveQuality);
+        }
+
+        // --- Debounce Utility ---
+        function debounce(func, wait) {
             let timeout;
-            return function() {
-                const context = this, args = arguments;
-                const later = function() {
-                    timeout = null;
-                    if (!immediate) func.apply(context, args);
-                };
-                const callNow = immediate && !timeout;
+            return function(...args) {
                 clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-                if (callNow) func.apply(context, args);
+                timeout = setTimeout(() => func.apply(this, args), wait);
             };
-        };
-
-        // Optimized particle count for better performance
-        function getDynamicParticleCount() {
-            const width = window.innerWidth;
-            const dpr = window.devicePixelRatio;
-            const memoryInfo = DEVICE_CAPABILITIES.memoryInfo;
-
-            // More aggressive optimization for better performance
-            if (DEVICE_CAPABILITIES.isLowEnd || width < 768) {
-                return 25000; // Optimized for low-end devices
-            } else if (width < 1200 || memoryInfo < 6) {
-                return 50000; // Optimized for mid-range
-            } else if (width < 1920) {
-                return 70000; // Optimized for higher-end
-            }
-            return 85000; // Maximum for powerful devices
         }
-        const PARTICLE_COUNT = getDynamicParticleCount();
-        const FIELD_RADIUS = 100;
 
         /*
          * ==================================
-         * == ORIGINAL SHADER CODE (PRESERVED) ==
+         * == SHADER CODE (OPTIMIZED) ==
          * ==================================
          */
-        const particleVertexShader = `
+        // NOTE: Shaders are kept largely the same as they are the core artistic component.
+        // Performance gains are made elsewhere (particle count, render loop).
+        const foregroundVertexShader = `
             uniform float uTime;
             uniform float uExpansionProgress;
             uniform float uConvergenceProgress;
             uniform float uDisintegrationProgress;
             uniform float uFieldRadius;
             uniform float uDisperse;
-
             attribute float aSize;
             attribute vec3 aColor;
             attribute vec3 aTargetPosition;
             attribute float aRandomness;
             attribute float aIsTextParticle;
             attribute vec3 aTextTargetPosition;
-
             varying vec3 vColor;
             varying float vAlpha;
 
+            // snoise function (omitted for brevity, it's unchanged from original)
             vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -976,7 +832,7 @@
                 m = m * m;
                 return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
             }
-            
+
             void main() {
                 vec3 chaoticPos = aTargetPosition;
                 float noiseFactor = snoise(vec3(chaoticPos.xy * 0.05, uTime * 0.1 + aRandomness * 5.0));
@@ -1020,7 +876,7 @@
             }
         `;
 
-        const particleFragmentShader = `
+        const foregroundFragmentShader = `
             varying vec3 vColor;
             varying float vAlpha;
             void main() {
@@ -1031,49 +887,28 @@
             }
         `;
 
-        // Background visual from Slide 10 finale animation
-        const finaleVertexShader = `
+        const backgroundVertexShader = `
             uniform float uTime;
-            attribute float aParticleType;
             varying float vAlpha;
-            varying float vParticleType;
             varying vec3 vColor;
-
             void main() {
-                vParticleType = aParticleType;
                 vec4 p = vec4(position, 1.0);
-
-                // OPTIMIZATION: Ripple effect moved to GPU
                 float dist = length(p.xy);
                 float ripple1 = sin(dist * 1.2 - uTime * 0.15) * 1.5 * exp(-dist * 0.1);
                 float ripple2 = sin(dist * 2.5 - uTime * 0.25) * 0.8 * exp(-dist * 0.15);
                 p.z += ripple1 + ripple2;
-
                 vec4 mvPosition = modelViewMatrix * p;
-
                 float zFactor = 1.0 - clamp(abs(mvPosition.z / 20.0), 0.0, 1.0);
-                float pSize = (zFactor * zFactor) * 2.0 + 0.5;
-                gl_PointSize = pSize;
-                vAlpha = zFactor * 1.2; // Increased brightness
-
-                // Brighter, more vivid colors
-                vec3 greenHaloColor = vec3(0.06, 0.9, 0.6);
-                vec3 greenCenterColor = vec3(0.8, 1.0, 0.9);
-                vec3 platinumHaloColor = vec3(0.7, 0.75, 0.85);
-                vec3 platinumCenterColor = vec3(1.0, 1.0, 1.0);
-
-                vec3 greenColor = mix(greenCenterColor, greenHaloColor, 0.5);
-                vec3 platinumColor = mix(platinumCenterColor, platinumHaloColor, 0.5);
-                vColor = mix(greenColor, platinumColor, aParticleType) * 1.2; // Increased brightness
-
+                gl_PointSize = (zFactor * zFactor) * 2.0 + 0.5;
+                vAlpha = zFactor * 0.7; // Slightly reduced alpha to stay in background
+                vColor = mix(vec3(0.06, 0.9, 0.6), vec3(0.7, 0.75, 0.85), sin(uTime + position.x) * 0.5 + 0.5);
                 gl_Position = projectionMatrix * mvPosition;
             }
         `;
 
-        const finaleFragmentShader = `
+        const backgroundFragmentShader = `
             varying float vAlpha;
             varying vec3 vColor;
-
             void main() {
                 float dist = distance(gl_PointCoord, vec2(0.5));
                 if (dist > 0.5) discard;
@@ -1082,243 +917,101 @@
             }
         `;
         
-        async function init() {
-            initScene(); 
-            initParticleScene();
-            await initSextantCube();
-            await createParticles();
-            setupEventListeners();
-            animate();
-            document.getElementById('start-overlay').classList.add('ready');
-            
-            // Performance optimization: Garbage collection hints
-            if (window.gc) {
-                setInterval(() => {
-                    if (performanceLevel === 'low') {
-                        window.gc();
-                    }
-                }, 10000);
-            }
-        }
-        
-        // BULLETPROOF MOBILE & DESKTOP AUDIO - Industry Best Practice
-        async function initAudio() {
-            if (audioInitialized) return true;
-
+        // --- BULLETPROOF MOBILE & DESKTOP AUDIO ---
+        // Step 1: Synchronous Unlock on user interaction
+        function unlockAudio() {
+            if (isAudioUnlocked) return;
             try {
-                // Create audio context with optimal settings for all platforms
-                if (!audioContext) {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)({
-                        latencyHint: 'interactive',
-                        sampleRate: 44100
-                    });
-                }
+                // Create a temporary oscillator to force audio hardware to wake up on iOS
+                const silentOscillator = Tone.context.createOscillator();
+                silentOscillator.frequency.value = 20; // Inaudible frequency
+                silentOscillator.connect(Tone.context.destination);
+                silentOscillator.start(0);
+                silentOscillator.stop(Tone.context.currentTime + 0.01);
 
-                // Start Tone.js with optimized settings
-                await Tone.start();
-                console.log('Tone.js started successfully');
-                
-                // Optimized volume settings for all platforms
-                if (DEVICE_CAPABILITIES.isIOS) {
-                    Tone.Master.volume.value = 0; // Normal volume - let iOS handle amplification
-                } else if (DEVICE_CAPABILITIES.isMobile) {
-                    Tone.Master.volume.value = 5; // Slight boost for Android
-                } else {
-                    Tone.Master.volume.value = 0; // Normal desktop volume
-                }
-
-                // Create audio effects with robust initialization
-                masterReverb = new Tone.Reverb(4).toDestination();
-                masterReverb.wet.value = 0.6;
-                await masterReverb.ready;
-                
-                masterChorus = new Tone.Chorus(2, 2.5, 0.7).connect(masterReverb);
-
-                // Standard volume boost for mobile devices
-                const mobileBoost = DEVICE_CAPABILITIES.isMobile ? 15 : 0;
-
-                // Create all synthesizers with mobile-optimized settings
-                droneSynth = new Tone.FMSynth({
-                    volume: -24 + mobileBoost,
-                    harmonicity: 0.5,
-                    modulationIndex: 10,
-                    envelope: { attack: 4, decay: 0.1, sustain: 1, release: 4 },
-                    modulationEnvelope: { attack: 4, decay: 0.1, sustain: 1, release: 4 }
-                }).connect(masterChorus);
-
-                const arpFilter = new Tone.AutoFilter("8n").start();
-                const arpSynth = new Tone.MonoSynth({
-                    volume: -12 + mobileBoost,
-                    oscillator: { type: "sawtooth" },
-                    filter: { Q: 2, type: "lowpass", rolloff: -24 },
-                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.1 }
-                }).connect(arpFilter).connect(masterChorus);
-                arp = new Tone.Pattern((time, note) => {
-                    arpSynth.triggerAttackRelease(note, "16n", time);
-                }, ["C2", "Eb2", "G2", "Bb2"], "up");
-                arp.interval = "16n";
-
-                padFilter = new Tone.Filter(400, "lowpass").connect(masterChorus);
-                padSynth = new Tone.PolySynth(Tone.FMSynth, {
-                    volume: -18 + mobileBoost,
-                    harmonicity: 1.5,
-                    modulationIndex: 5,
-                    envelope: { attack: 3, decay: 0.5, sustain: 1, release: 5 }
-                }).connect(padFilter);
-
-                disintegrateNoise = new Tone.NoiseSynth({
-                    volume: -20 + mobileBoost,
-                    noise: { type: 'white' },
-                    envelope: { attack: 0.01, decay: 1.5, sustain: 0 }
-                }).connect(masterReverb);
-
-                climaxChime = new Tone.MetalSynth({
-                    volume: -10 + mobileBoost,
-                    frequency: 300,
-                    envelope: { attack: 0.001, decay: 1.4, release: 0.2 },
-                    harmonicity: 5.1,
-                    modulationIndex: 32,
-                    resonance: 4000,
-                    octaves: 1.5
-                }).connect(masterReverb);
-
-                const cinematicDelay = new Tone.FeedbackDelay("8n", 0.4).connect(masterChorus);
-                cinematicDelay.wet.value = 0.7;
-                
-                const cinematicChorus = new Tone.Chorus({
-                    frequency: 1.5,
-                    delayTime: 3.5,
-                    depth: 0.8,
-                    spread: 180
-                }).connect(cinematicDelay);
-                
-                const cinematicFilter = new Tone.Filter({
-                    type: "lowpass",
-                    frequency: 2000,
-                    Q: 1.4
-                }).connect(cinematicChorus);
-
-                cinematicLead = new Tone.DuoSynth({
-                    volume: -20 + mobileBoost,
-                    vibratoAmount: 0.2,
-                    vibratoRate: 4,
-                    harmonicity: 1.5,
-                    voice0: {
-                        oscillator: { 
-                            type: 'sawtooth',
-                            partials: [1, 0.5, 0.3, 0.25, 0.2]
-                        },
-                        envelope: { 
-                            attack: 2.5, 
-                            decay: 0.3, 
-                            sustain: 0.8, 
-                            release: 3.5 
-                        },
-                        filter: {
-                            Q: 2,
-                            type: 'lowpass',
-                            rolloff: -12
-                        }
-                    },
-                    voice1: {
-                        oscillator: { 
-                            type: 'pulse',
-                            width: 0.3
-                        },
-                        envelope: { 
-                            attack: 3.0, 
-                            decay: 0.2, 
-                            sustain: 0.6, 
-                            release: 4.0 
-                        },
-                        filter: {
-                            Q: 1.5,
-                            type: 'lowpass',
-                            rolloff: -12
-                        }
-                    }
-                }).connect(cinematicFilter);
-
-                audioInitialized = true;
-                console.log('Audio initialization completed successfully');
-                return true;
-                
-            } catch (error) {
-                console.error('Audio initialization failed:', error);
-                return false;
-            }
-        }
-
-        // MOBILE AUDIO UNLOCK - Bulletproof synchronous approach
-        function unlockMobileAudio() {
-            if (!audioInitialized || !DEVICE_CAPABILITIES.isMobile) return;
-            
-            try {
-                // CRITICAL: All operations must be synchronous for mobile audio unlock
-                console.log('Executing mobile audio unlock...');
-                
-                // Resume audio context synchronously
-                if (audioContext && audioContext.state === 'suspended') {
-                    audioContext.resume();
-                }
+                Tone.start();
                 if (Tone.context.state === 'suspended') {
                     Tone.context.resume();
                 }
-                
-                // IMMEDIATELY play audible sound to unlock iOS audio
-                // This MUST happen synchronously in the user interaction
-                const unlockOsc = new Tone.Oscillator(220, "sine").toDestination();
-                unlockOsc.volume.value = -20; // Audible but not loud
-                unlockOsc.start();
-                unlockOsc.stop("+0.1");
-                
-                console.log('Mobile audio unlock executed');
-                
+                console.log('Audio unlocked successfully.');
+                isAudioUnlocked = true;
             } catch (error) {
-                console.warn('Mobile audio unlock failed:', error);
+                console.warn('Audio unlock failed. This can happen if not triggered by a direct user action.', error);
             }
         }
 
+        // Step 2: Asynchronous initialization of all audio components
+        async function initializeAudio() {
+            if (isAudioInitialized) return;
+            try {
+                await Tone.loaded(); // Ensure Tone.js is fully ready
+                
+                const mobileBoost = isLowEndDevice ? 12 : 0;
+
+                masterReverb = new Tone.Reverb(4).toDestination();
+                masterReverb.wet.value = 0.6;
+                await masterReverb.ready;
+                masterChorus = new Tone.Chorus(2, 2.5, 0.7).connect(masterReverb);
+
+                droneSynth = new Tone.FMSynth({ volume: -24 + mobileBoost, harmonicity: 0.5, modulationIndex: 10, envelope: { attack: 4, release: 4 }, modulationEnvelope: { attack: 4, release: 4 } }).connect(masterChorus);
+                const arpFilter = new Tone.AutoFilter("8n").start();
+                const arpSynth = new Tone.MonoSynth({ volume: -12 + mobileBoost, oscillator: { type: "sawtooth" }, filter: { Q: 2, type: "lowpass", rolloff: -24 }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.1 } }).connect(arpFilter).connect(masterChorus);
+                arp = new Tone.Pattern((time, note) => { arpSynth.triggerAttackRelease(note, "16n", time); }, ["C2", "Eb2", "G2", "Bb2"], "up");
+                arp.interval = "16n";
+                padFilter = new Tone.Filter(400, "lowpass").connect(masterChorus);
+                padSynth = new Tone.PolySynth(Tone.FMSynth, { volume: -18 + mobileBoost, harmonicity: 1.5, modulationIndex: 5, envelope: { attack: 3, release: 5 } }).connect(padFilter);
+                disintegrateNoise = new Tone.NoiseSynth({ volume: -20 + mobileBoost, noise: { type: 'white' }, envelope: { attack: 0.01, decay: 1.5, sustain: 0 } }).connect(masterReverb);
+                climaxChime = new Tone.MetalSynth({ volume: -10 + mobileBoost, frequency: 300, envelope: { attack: 0.001, decay: 1.4, release: 0.2 }, harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5 }).connect(masterReverb);
+                const cinematicDelay = new Tone.FeedbackDelay("8n", 0.4).connect(masterChorus);
+                cinematicDelay.wet.value = 0.7;
+                const cinematicChorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.8, spread: 180 }).connect(cinematicDelay);
+                const cinematicFilter = new Tone.Filter({ type: "lowpass", frequency: 2000, Q: 1.4 }).connect(cinematicChorus);
+                cinematicLead = new Tone.DuoSynth({ volume: -20 + mobileBoost, vibratoAmount: 0.2, vibratoRate: 4, harmonicity: 1.5, voice0: { oscillator: { type: 'sawtooth' }, envelope: { attack: 2.5, release: 3.5 }, filter: { Q: 2, type: 'lowpass' } }, voice1: { oscillator: { type: 'pulse', width: 0.3 }, envelope: { attack: 3.0, release: 4.0 }, filter: { Q: 1.5, type: 'lowpass' } } }).connect(cinematicFilter);
+
+                isAudioInitialized = true;
+                console.log('Audio components initialized.');
+            } catch (error) {
+                console.error('Full audio initialization failed:', error);
+            }
+        }
+
+        // --- Scene and Visuals Setup ---
+        async function init() {
+            initForegroundScene(); 
+            initBackgroundScene();
+            await initSextantCube();
+            await createForegroundParticles();
+            setupEventListeners();
+            animate();
+            document.getElementById('start-overlay').classList.add('ready');
+        }
+        
         async function getTextPoints() {
-            return new Promise((resolve) => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const canvasSize = 2048;
-                canvas.width = canvasSize;
-                canvas.height = canvasSize;
-                
-                // MOBILE PARTICLE TEXT SIZE ADJUSTMENT
-                let fontSize = 200;
-                let scaleFactor = 0.08;
-                
-                if (DEVICE_CAPABILITIES.isMobile) {
-                    fontSize = 120; // Adjusted from 100
-                    scaleFactor = 0.0375; // Adjusted from 0.0325
-                } else if (DEVICE_CAPABILITIES.isTablet) {
-                    fontSize = 160;
-                    scaleFactor = 0.055;
-                }
-                
-                ctx.font = `${fontSize}px "ivypresto-display"`;
-                ctx.fillStyle = '#fff';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(TITLE_TEXT, canvasSize / 2, canvasSize / 2);
-                const imageData = ctx.getImageData(0, 0, canvasSize, canvasSize);
-                const points = [];
-                const density = 4;
-                for (let y = 0; y < canvasSize; y += density) {
-                    for (let x = 0; x < canvasSize; x += density) {
-                        const alpha = imageData.data[(y * canvasSize + x) * 4 + 3];
-                        if (alpha > 128) {
-                            const worldX = (x - canvasSize / 2) * scaleFactor;
-                            const worldY = -(y - canvasSize / 2) * scaleFactor;
-                            points.push(new THREE.Vector3(worldX, worldY, 0));
-                        }
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const canvasSize = 2048;
+            canvas.width = canvasSize;
+            canvas.height = canvasSize;
+            
+            let fontSize = isLowEndDevice ? 120 : 200;
+            let scaleFactor = isLowEndDevice ? 0.0375 : 0.08;
+            
+            ctx.font = `bold ${fontSize}px "ivypresto-display", serif`;
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(TITLE_TEXT, canvasSize / 2, canvasSize / 2);
+            const imageData = ctx.getImageData(0, 0, canvasSize, canvasSize);
+            const points = [];
+            const density = 4;
+            for (let y = 0; y < canvasSize; y += density) {
+                for (let x = 0; x < canvasSize; x += density) {
+                    if (imageData.data[(y * canvasSize + x) * 4 + 3] > 128) {
+                        points.push(new THREE.Vector3((x - canvasSize / 2) * scaleFactor, -(y - canvasSize / 2) * scaleFactor, 0));
                     }
                 }
-                resolve(points);
-            });
+            }
+            return points;
         }
 
         async function initSextantCube() {
@@ -1330,158 +1023,101 @@
             sextantCubeCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
             sextantCubeCamera.position.z = 3;
 
-            sextantCubeRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+            sextantCubeRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !isLowEndDevice, alpha: true });
             sextantCubeRenderer.setSize(size, size);
             sextantCubeRenderer.setPixelRatio(window.devicePixelRatio);
 
-            const particleCount = DEVICE_CAPABILITIES.isLowEnd ? 1500 : 2500;
+            const particleCount = isLowEndDevice ? 1500 : 2500;
             const geometry = new THREE.BufferGeometry();
             const positions = new Float32Array(particleCount * 3);
-            const colors = new Float32Array(particleCount * 3);
-
             const color1 = new THREE.Color(0.06, 0.73, 0.51);
             const color2 = new THREE.Color(0.66, 0.33, 0.98);
 
             for (let i = 0; i < particleCount; i++) {
-                const i3 = i * 3;
-                
                 const edge = Math.floor(Math.random() * 12);
                 let x, y, z;
-                
                 const t = Math.random();
                 switch(edge) {
-                    case 0: x = t * 2 - 1; y = -1; z = -1; break;
-                    case 1: x = t * 2 - 1; y = 1; z = -1; break;
-                    case 2: x = t * 2 - 1; y = -1; z = 1; break;
-                    case 3: x = t * 2 - 1; y = 1; z = 1; break;
-                    case 4: x = -1; y = t * 2 - 1; z = -1; break;
-                    case 5: x = 1; y = t * 2 - 1; z = -1; break;
-                    case 6: x = -1; y = t * 2 - 1; z = 1; break;
-                    case 7: x = 1; y = t * 2 - 1; z = 1; break;
-                    case 8: x = -1; y = -1; z = t * 2 - 1; break;
-                    case 9: x = 1; y = -1; z = t * 2 - 1; break;
-                    case 10: x = -1; y = 1; z = t * 2 - 1; break;
-                    case 11: x = 1; y = 1; z = t * 2 - 1; break;
-                    default: x = 0; y = 0; z = 0;
+                    case 0: x=t*2-1; y=-1; z=-1; break; case 1: x=t*2-1; y=1; z=-1; break;
+                    case 2: x=t*2-1; y=-1; z=1; break; case 3: x=t*2-1; y=1; z=1; break;
+                    case 4: x=-1; y=t*2-1; z=-1; break; case 5: x=1; y=t*2-1; z=-1; break;
+                    case 6: x=-1; y=t*2-1; z=1; break; case 7: x=1; y=t*2-1; z=1; break;
+                    case 8: x=-1; y=-1; z=t*2-1; break; case 9: x=1; y=-1; z=t*2-1; break;
+                    case 10: x=-1; y=1; z=t*2-1; break; case 11: x=1; y=1; z=t*2-1; break;
+                    default: x=0; y=0; z=0;
                 }
-                
-                positions[i3] = x;
-                positions[i3 + 1] = y;
-                positions[i3 + 2] = z;
-
-                const mixFactor = Math.random();
-                const color = color1.clone().lerp(color2, mixFactor);
-                colors[i3] = color.r;
-                colors[i3 + 1] = color.g;
-                colors[i3 + 2] = color.b;
+                positions.set([x, y, z], i * 3);
             }
 
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-            const material = new THREE.PointsMaterial({
-                size: 1.5,
-                vertexColors: true,
-                blending: THREE.NormalBlending,
-                transparent: true,
-                opacity: 0.6
-            });
-
+            const material = new THREE.PointsMaterial({ size: 1.5, color: color1.lerp(color2, Math.random()), blending: THREE.NormalBlending, transparent: true, opacity: 0.6 });
             sextantCube = new THREE.Points(geometry, material);
             sextantCubeScene.add(sextantCube);
         }
 
-        function initScene() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = FIELD_RADIUS;
-            const canvas = document.getElementById('liminal-canvas');
-            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            composer = new THREE.EffectComposer(renderer);
-            composer.addPass(new THREE.RenderPass(scene, camera));
+        function initForegroundScene() {
+            fgScene = new THREE.Scene();
+            fgCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            fgCamera.position.z = 100; // FIELD_RADIUS
+            const canvas = document.getElementById('foreground-canvas');
+            fgRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !isLowEndDevice, alpha: true });
+            fgRenderer.setSize(window.innerWidth, window.innerHeight);
+            fgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            fgComposer = new THREE.EffectComposer(fgRenderer);
+            fgComposer.addPass(new THREE.RenderPass(fgScene, fgCamera));
             bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.6, 0.5, 0.8);
-            composer.addPass(bloomPass);
+            fgComposer.addPass(bloomPass);
         }
 
-        function initParticleScene() {
-            particleScene = new THREE.Scene();
-            particleCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            particleCamera.position.z = 2;
-            particleRenderer = new THREE.WebGLRenderer({ canvas: document.getElementById('particle-canvas'), antialias: true, alpha: true });
-            particleRenderer.setSize(window.innerWidth, window.innerHeight);
-            particleRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        function initBackgroundScene() {
+            bgScene = new THREE.Scene();
+            bgCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            bgCamera.position.z = 2;
+            bgRenderer = new THREE.WebGLRenderer({ canvas: document.getElementById('background-canvas'), antialias: !isLowEndDevice, alpha: true });
+            bgRenderer.setSize(window.innerWidth, window.innerHeight);
+            bgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             
-            // Smart particle count for finale animation with performance adaptation
-            const baseCount = DEVICE_CAPABILITIES.isLowEnd ? 35000 : 55000;
-            const pCount = Math.floor(baseCount * adaptiveQuality);
+            const pCount = getAdaptiveParticleCount(isLowEndDevice ? 30000 : 50000);
             const geometry = new THREE.BufferGeometry();
             const pos = new Float32Array(pCount * 3);
-            const particleTypes = new Float32Array(pCount);
-            
             for (let i = 0; i < pCount; i++) {
-                const i3 = i * 3;
                 const r = Math.random() * 30;
                 const a = Math.random() * Math.PI * 2;
-                pos[i3] = r * Math.cos(a);
-                pos[i3 + 1] = r * Math.sin(a);
-                pos[i3 + 2] = (Math.random() - .5) * 12;
-                particleTypes[i] = Math.random() < 0.2 ? 1.0 : 0.0;
+                pos.set([r * Math.cos(a), r * Math.sin(a), (Math.random() - .5) * 12], i * 3);
             }
-            
             geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-            geometry.setAttribute('aParticleType', new THREE.BufferAttribute(particleTypes, 1));
-            
-            const material = new THREE.ShaderMaterial({
-                vertexShader: finaleVertexShader,
-                fragmentShader: finaleFragmentShader,
-                uniforms: { uTime: { value: 0 } },
-                blending: THREE.AdditiveBlending,
-                transparent: true,
-                depthWrite: false
-            });
-            
-            backgroundVisual = new THREE.Points(geometry, material);
-            particleScene.add(backgroundVisual);
-            
-            particleComposer = new THREE.EffectComposer(particleRenderer);
-            particleComposer.addPass(new THREE.RenderPass(particleScene, particleCamera));
+            const material = new THREE.ShaderMaterial({ vertexShader: backgroundVertexShader, fragmentShader: backgroundFragmentShader, uniforms: { uTime: { value: 0 } }, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false });
+            bgRippleVisual = new THREE.Points(geometry, material);
+            bgScene.add(bgRippleVisual);
+            bgComposer = new THREE.EffectComposer(bgRenderer);
+            bgComposer.addPass(new THREE.RenderPass(bgScene, bgCamera));
             const secretBloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.3, 0.5, 0.1);
-            particleComposer.addPass(secretBloomPass);
+            bgComposer.addPass(secretBloomPass);
         }
 
-        async function createParticles() {
+        async function createForegroundParticles() {
             const textPoints = await getTextPoints();
-            const adaptiveParticleCount = getAdaptiveParticleCount();
+            const particleCount = getAdaptiveParticleCount(isLowEndDevice ? 20000 : 70000);
             const geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(adaptiveParticleCount * 3);
-            const targetPositions = new Float32Array(adaptiveParticleCount * 3);
-            const sizes = new Float32Array(adaptiveParticleCount);
-            const colors = new Float32Array(adaptiveParticleCount * 3);
-            const randomness = new Float32Array(adaptiveParticleCount);
-            const textTargetPositions = new Float32Array(adaptiveParticleCount * 3);
-            const isTextParticle = new Float32Array(adaptiveParticleCount);
-            const color1 = new THREE.Color("#4338ca");
-            const color2 = new THREE.Color("#a855f7");
-            const color3 = new THREE.Color("#10b981");
+            const positions = new Float32Array(particleCount * 3);
+            const targetPositions = new Float32Array(particleCount * 3);
+            const sizes = new Float32Array(particleCount);
+            const colors = new Float32Array(particleCount * 3);
+            const randomness = new Float32Array(particleCount);
+            const textTargetPositions = new Float32Array(particleCount * 3);
+            const isTextParticle = new Float32Array(particleCount);
+            const color1 = new THREE.Color("#4338ca"), color2 = new THREE.Color("#a855f7"), color3 = new THREE.Color("#10b981");
             const textParticleIndices = new Set();
-            while (textParticleIndices.size < textPoints.length * 2 && textParticleIndices.size < adaptiveParticleCount / 3) {
-                textParticleIndices.add(Math.floor(Math.random() * adaptiveParticleCount));
+            while (textParticleIndices.size < textPoints.length * 2 && textParticleIndices.size < particleCount / 3) {
+                textParticleIndices.add(Math.floor(Math.random() * particleCount));
             }
-            for (let i = 0; i < adaptiveParticleCount; i++) {
-                const i3 = i * 3;
-                const theta = Math.random() * 2 * Math.PI;
-                const phi = Math.acos((Math.random() * 2) - 1);
-                const r = Math.pow(Math.random(), 0.7) * FIELD_RADIUS;
-                targetPositions[i3] = r * Math.sin(phi) * Math.cos(theta);
-                targetPositions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-                targetPositions[i3 + 2] = r * Math.cos(phi);
-                positions.set([0, 0, 0], i3);
+            for (let i = 0; i < particleCount; i++) {
+                const theta = Math.random() * 2 * Math.PI, phi = Math.acos((Math.random() * 2) - 1), r = Math.pow(Math.random(), 0.7) * 100;
+                targetPositions.set([r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi)], i * 3);
+                positions.set([0, 0, 0], i * 3);
                 sizes[i] = Math.random() * 2.5 + 1.0;
-                const randomColor = color1.clone().lerp(color2, Math.random());
-                randomColor.lerp(color3, Math.random() * 0.4);
-                colors.set([randomColor.r, randomColor.g, randomColor.b], i3);
+                const randomColor = color1.clone().lerp(color2, Math.random()).lerp(color3, Math.random() * 0.4);
+                colors.set([randomColor.r, randomColor.g, randomColor.b], i * 3);
                 randomness[i] = Math.random();
                 isTextParticle[i] = 0.0;
             }
@@ -1489,9 +1125,8 @@
             textPoints.forEach((point, i) => {
                 const particleIndex = textParticleArray[i % textParticleArray.length];
                 if (particleIndex === undefined) return;
-                const i3 = particleIndex * 3;
                 isTextParticle[particleIndex] = 1.0;
-                textTargetPositions.set([point.x, point.y, point.z], i3);
+                textTargetPositions.set([point.x, point.y, point.z], particleIndex * 3);
             });
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
             geometry.setAttribute('aTargetPosition', new THREE.BufferAttribute(targetPositions, 3));
@@ -1500,89 +1135,51 @@
             geometry.setAttribute('aRandomness', new THREE.BufferAttribute(randomness, 1));
             geometry.setAttribute('aIsTextParticle', new THREE.BufferAttribute(isTextParticle, 1));
             geometry.setAttribute('aTextTargetPosition', new THREE.BufferAttribute(textTargetPositions, 3));
-            const material = new THREE.ShaderMaterial({ 
-                vertexShader: particleVertexShader, 
-                fragmentShader: particleFragmentShader, 
-                uniforms: { 
-                    uTime: { value: 0 },
-                    uExpansionProgress: { value: 0.0 },
-                    uConvergenceProgress: { value: 0.0 },
-                    uDisintegrationProgress: { value: 0.0 },
-                    uDisperse: { value: 0.0 },
-                    uFieldRadius: { value: FIELD_RADIUS }
-                },
-                transparent: true, 
-                blending: THREE.AdditiveBlending, 
-                depthWrite: false
-            });
-            particles = new THREE.Points(geometry, material);
-            scene.add(particles);
+            const material = new THREE.ShaderMaterial({ vertexShader: foregroundVertexShader, fragmentShader: foregroundFragmentShader, uniforms: { uTime: { value: 0 }, uExpansionProgress: { value: 0.0 }, uConvergenceProgress: { value: 0.0 }, uDisintegrationProgress: { value: 0.0 }, uDisperse: { value: 0.0 }, uFieldRadius: { value: 100 } }, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+            fgParticles = new THREE.Points(geometry, material);
+            fgScene.add(fgParticles);
         }
 
         function setupEventListeners() {
-            window.addEventListener('resize', debounce(onWindowResize, 250), false);
+            window.addEventListener('resize', debounce(onWindowResize, 200), false);
             
             const startOverlay = document.getElementById('start-overlay');
-            startOverlay.addEventListener('click', async () => {
+            startOverlay.addEventListener('click', () => {
                 startOverlay.style.opacity = '0';
                 startOverlay.style.pointerEvents = 'none';
                 
-                // BULLETPROOF AUDIO INITIALIZATION - Industry Best Practice
-                try {
-                    const audioSuccess = await initAudio();
-                    
-                    if (audioSuccess) {
-                        // CRITICAL: Mobile audio unlock must be synchronous in click handler
-                        unlockMobileAudio();
-                        
-                        // Start the visual sequence
-                        runOpeningSequence();
-                        document.getElementById('mute-button').classList.add('visible');
-                    } else {
-                        // Even if audio fails, continue with visuals
-                        runOpeningSequence();
-                        document.getElementById('mute-button').classList.add('visible');
+                // --- NEW AUDIO FLOW ---
+                // 1. Synchronously unlock audio context.
+                unlockAudio();
+                
+                // 2. Asynchronously initialize all audio nodes.
+                initializeAudio().then(() => {
+                    // 3. Once initialized, schedule and start the audio sequence.
+                    if (isAudioInitialized) {
+                        scheduleAudioSequence();
+                        Tone.Transport.start();
                     }
-                    
-                } catch (error) {
-                    console.error('Audio initialization failed:', error);
-                    runOpeningSequence();
-                    document.getElementById('mute-button').classList.add('visible');
-                }
+                });
+
+                // 4. Start visual sequence immediately, not waiting for audio.
+                runOpeningSequence();
+                document.getElementById('mute-button').classList.add('visible');
+
             }, { once: true });
 
-            const muteButton = document.getElementById('mute-button');
-            muteButton.addEventListener('click', () => {
-                if (!audioInitialized) return;
+            document.getElementById('mute-button').addEventListener('click', () => {
+                if (!isAudioInitialized) return;
                 Tone.Master.mute = !Tone.Master.mute;
-                muteButton.className = Tone.Master.mute ? 'muted visible' : 'unmuted visible';
+                document.getElementById('mute-button').className = Tone.Master.mute ? 'muted visible' : 'unmuted visible';
             });
 
-            const passwordForm = document.getElementById('password-form');
-            const passwordInput = document.getElementById('password-input');
-
-            passwordForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                checkPassword();
-            });
-
-            passwordInput.addEventListener('input', handleTyping);
-
+            document.getElementById('password-form').addEventListener('submit', (e) => { e.preventDefault(); checkPassword(); });
+            document.getElementById('password-input').addEventListener('input', handleTyping);
             window.addEventListener('keydown', handleKeyDown);
             window.addEventListener('keyup', handleKeyUp);
             window.addEventListener('touchstart', handleTouchStart);
-
-            const hintIcon = document.getElementById('hint-icon');
-            const hintTooltip = document.getElementById('hint-tooltip');
-            hintIcon.addEventListener('click', (e) => {
-                e.stopPropagation();
-                hintTooltip.classList.toggle('visible');
-            });
-            document.addEventListener('click', () => {
-                if (hintTooltip.classList.contains('visible')) {
-                    hintTooltip.classList.remove('visible');
-                }
-            });
+            document.getElementById('hint-icon').addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('hint-tooltip').classList.toggle('visible'); });
+            document.addEventListener('click', () => { document.getElementById('hint-tooltip').classList.remove('visible'); });
         }
 
         function handleKeyDown(e) {
@@ -1593,11 +1190,7 @@
                 transitionToSecretPage();
             }
         }
-
-        function handleKeyUp(e) {
-            keysPressed.delete(e.code);
-        }
-
+        function handleKeyUp(e) { keysPressed.delete(e.code); }
         function handleTouchStart() {
             if (isTransitioning || activeScene !== 'title') return;
             clearTimeout(tapTimer);
@@ -1606,30 +1199,33 @@
                 isTransitioning = true;
                 transitionToSecretPage();
             } else {
-                tapTimer = setTimeout(() => {
-                    tapCount = 0;
-                }, 500); 
+                tapTimer = setTimeout(() => { tapCount = 0; }, 500); 
             }
         }
 
         function transitionToSecretPage() {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
-            window.removeEventListener('touchstart', handleTouchStart);
+            window.addEventListener('touchstart', handleTouchStart);
 
-            const riddleOverlay = document.getElementById('riddle-overlay');
-            const canvasContainer = document.getElementById('liminal-canvas-container');
-            const particleCanvasContainer = document.getElementById('particle-canvas-container');
-            const animatedTextContainer = document.getElementById('animated-text-container');
-            const socialLinksContainer = document.getElementById('social-links-container');
-            
-            gsap.killTweensOf(riddleOverlay);
+            const tl = gsap.timeline({
+                onComplete: () => {
+                    // Cleanup foreground scene for performance
+                    if (fgParticles) {
+                        fgParticles.geometry.dispose();
+                        fgParticles.material.dispose();
+                        fgScene.remove(fgParticles);
+                        fgParticles = null;
+                    }
+                    if (fgRenderer) {
+                        fgRenderer.dispose();
+                        fgRenderer.domElement.style.display = 'none';
+                    }
+                    if (window.gc) window.gc(); // Hint for garbage collection
+                }
+            });
 
-            // Hollywood-level cinematic transition
-            const cinematicTL = gsap.timeline();
-
-            // Phase 1: Audio fade and particle dissolution
-            if (audioInitialized) {
+            if (isAudioInitialized) {
                 Tone.Transport.stop();
                 Tone.Transport.cancel();
                 droneSynth.volume.rampTo(-Infinity, 2);
@@ -1639,416 +1235,153 @@
             }
             document.getElementById('mute-button').classList.remove('visible');
 
-            // Phase 2: Dramatic particle implosion
-            cinematicTL.to(particles.material.uniforms.uDisperse, {
-                value: 15.0,
-                duration: 1.5,
-                ease: "power4.in"
-            }, 0);
-
-            // Phase 3: Screen blur and fade
-            cinematicTL.to([riddleOverlay, canvasContainer], {
-                duration: 2.0,
-                opacity: 0,
-                filter: "blur(20px)",
-                scale: 1.1,
-                ease: "power3.inOut"
-            }, 0.5);
-
-            // Phase 4: Camera zoom effect
-            cinematicTL.to(camera.position, {
-                z: FIELD_RADIUS * 0.3,
-                duration: 2.0,
-                ease: "power2.inOut"
-            }, 0.5);
-
-            // Phase 5: Scene cleanup and transition with memory optimization
-            cinematicTL.call(() => {
-                if (riddleOverlay) riddleOverlay.classList.remove('visible');
-                if (canvasContainer) canvasContainer.classList.add('hidden');
-                
-                // Smart memory cleanup
-                if (particles) {
-                    particles.geometry.dispose();
-                    particles.material.dispose();
-                    scene.remove(particles);
-                    particles = null;
-                }
-                if (renderer) {
-                    renderer.renderLists.dispose();
-                    renderer.dispose();
-                }
-                
-                // Force garbage collection if available
-                if (window.gc && performanceLevel === 'low') {
-                    window.gc();
-                }
-
+            tl.to(fgParticles.material.uniforms.uDisperse, { value: 15.0, duration: 1.5, ease: "power4.in" }, 0);
+            tl.to([document.getElementById('riddle-overlay'), document.getElementById('foreground-canvas-container')], { duration: 2.0, opacity: 0, filter: "blur(20px)", scale: 1.1, ease: "power3.inOut" }, 0.5);
+            tl.to(fgCamera.position, { z: 100 * 0.3, duration: 2.0, ease: "power2.inOut" }, 0.5);
+            
+            tl.call(() => {
                 activeScene = 'secret';
                 startTextAnimation();
-
-                // Phase 6: New scene emergence
-                if (particleCanvasContainer) {
-                    particleCanvasContainer.classList.remove('hidden');
-                    particleCanvasContainer.style.filter = "blur(10px)";
-                    particleCanvasContainer.style.opacity = "0";
-                }
+                document.getElementById('riddle-overlay').classList.remove('visible');
+                document.getElementById('foreground-canvas-container').classList.add('hidden');
             }, null, 2.5);
 
-            // Phase 7: New scene reveal with cinematic flair
-            cinematicTL.to(particleCanvasContainer, {
-                duration: 2.5,
-                opacity: 1,
-                filter: "blur(0px)",
-                ease: "power3.out"
-            }, 3.0);
-
-            // Phase 8: UI elements cascade in
-            cinematicTL.fromTo(animatedTextContainer, {
-                opacity: 0,
-                y: 50,
-                scale: 0.9
-            }, {
-                opacity: 1,
-                y: 0,
-                scale: 1,
-                duration: 1.5,
-                ease: "back.out(1.7)"
-            }, 4.0);
-
-            cinematicTL.call(() => {
-                if (animatedTextContainer) animatedTextContainer.classList.add('visible');
-                if (socialLinksContainer) socialLinksContainer.classList.add('visible');
-                
-                const footerElements = document.getElementById('footer-elements');
-                if (footerElements) footerElements.classList.add('visible');
-            }, null, 4.0);
-
-            // Phase 9: Social links and footer stagger in
-            cinematicTL.fromTo("#social-links-container a", {
-                opacity: 0,
-                y: 30,
-                scale: 0.8
-            }, {
-                opacity: 1,
-                y: 0,
-                scale: 1,
-                duration: 0.8,
-                stagger: 0.15,
-                ease: "back.out(1.7)"
-            }, 4.5);
-
-            cinematicTL.fromTo(["#contact-link", "#rights-text"], {
-                opacity: 0,
-                y: 20
-            }, {
-                opacity: 1,
-                y: 0,
-                duration: 1.0,
-                stagger: 0.2,
-                ease: "power2.out"
-            }, 5.0);
+            tl.to(document.getElementById('background-canvas-container'), { duration: 2.5, opacity: 1, ease: "power3.out" }, 2.5);
+            tl.fromTo(document.getElementById('animated-text-container'), { opacity: 0, y: 50, scale: 0.9 }, { opacity: 1, y: 0, scale: 1, duration: 1.5, ease: "back.out(1.7)", onStart: () => { document.getElementById('animated-text-container').classList.add('visible'); } }, 3.5);
+            tl.call(() => { document.getElementById('social-links-container').classList.add('visible'); document.getElementById('footer-elements').classList.add('visible'); }, null, 4.0);
+            tl.fromTo("#social-links-container a", { opacity: 0, y: 30, scale: 0.8 }, { opacity: 1, y: 0, scale: 1, duration: 0.8, stagger: 0.15, ease: "back.out(1.7)" }, 4.0);
+            tl.fromTo(["#contact-link", "#rights-text"], { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 1.0, stagger: 0.2, ease: "power2.out" }, 4.5);
         }
 
         function handleTyping(e) {
             if (isTransitioning) return;
             const currentInput = e.target.value.toUpperCase();
-            let matchCount = 0;
-            const target = "LIMINAL";
-            for(let i = 0; i < currentInput.length; i++) {
-                if (i < target.length && currentInput[i] === target[i]) {
-                    matchCount++;
-                } else {
-                    matchCount = 0;
-                    break;
-                }
-            }
-            const glowAmount = (matchCount / target.length) * 0.6;
-            gsap.to(visualFeedback, { glow: glowAmount, duration: 0.5, ease: 'power2.out' });
-
-            if (CORRECT_PASSWORDS.includes(currentInput)) {
-                checkPassword(true);
-            }
+            const matchCount = (currentInput.match(/^L?I?M?I?N?A?L?/) || [''])[0].length;
+            gsap.to(visualFeedback, { glow: (matchCount / "LIMINAL".length) * 0.6, duration: 0.5, ease: 'power2.out' });
+            if (CORRECT_PASSWORDS.includes(currentInput)) checkPassword(true);
         }
         
         function checkPassword(isAutoTrigger = false) {
             if (isTransitioning) return;
             const passwordInput = document.getElementById('password-input');
-            const passwordForm = document.getElementById('password-form');
-            const enteredPassword = passwordInput.value.toUpperCase().trim();
-
-            if (isAutoTrigger || CORRECT_PASSWORDS.includes(enteredPassword)) {
+            if (isAutoTrigger || CORRECT_PASSWORDS.includes(passwordInput.value.toUpperCase().trim())) {
                 isTransitioning = true; 
                 passwordInput.blur();
-                
-                gsap.to(visualFeedback, { 
-                    glow: 1.5, 
-                    duration: 0.5, 
-                    ease: 'power2.out'
-                });
-
+                gsap.to(visualFeedback, { glow: 1.5, duration: 0.5, ease: 'power2.out' });
                 transitionToSecretPage();
             } else {
-                passwordForm.classList.add('error');
+                const form = document.getElementById('password-form');
+                form.classList.add('error');
                 passwordInput.value = '';
-                setTimeout(() => passwordForm.classList.remove('error'), 500);
-
-                gsap.to(visualFeedback, { 
-                    disperse: 5.0, 
-                    duration: 1.5,
-                    ease: 'power2.out',
-                    yoyo: true,
-                    repeat: 1
-                });
+                setTimeout(() => form.classList.remove('error'), 500);
+                gsap.to(visualFeedback, { disperse: 5.0, duration: 0.75, ease: 'elastic.out(1, 0.5)', onComplete: () => gsap.to(visualFeedback, {disperse: 0, duration: 0.5}) });
             }
         }
         
         function startTextAnimation() {
             const textElement = document.getElementById('animated-text');
-            const flickerElement = document.getElementById('flicker-text');
             const dateLeftElement = document.getElementById('event-date-left');
             const dateRightElement = document.getElementById('event-date-right');
-            if (!textElement || !flickerElement || !dateLeftElement || !dateRightElement) return;
+            if (!textElement || !dateLeftElement || !dateRightElement) return;
             
             textElement.textContent = "SURFACE TENSION";
-
             const eventTitle = encodeURIComponent("SURFACE TENSION - DIGITAL DRIP AT SEXTANT");
             const eventLocation = encodeURIComponent("539 Valencia Street, San Francisco, CA");
-            const eventDetails = encodeURIComponent(
-                "Experience the intersection of digital art and specialty coffee.\n\nAn immersive art showcase from 5:00 PM to 6:30 PM, featuring exclusive digital installations and signature drinks crafted for the event.\n\nThe evening then transitions into a vibrant rave space with a live DJ set beginning at 7 PM. Expect exciting surprises and special gifts throughout the night.\n\n---\n\nFollow the journey:\nInstagram: https://www.instagram.com/surfacetension.co\nTikTok: https://www.tiktok.com/@surfacetension.co\nWebsite: https://www.surfacetension.co"
-            );
+            const eventDetails = encodeURIComponent("Experience the intersection of digital art and specialty coffee. An immersive art showcase from 5:00 PM to 6:30 PM, transitioning into a vibrant rave space with a live DJ set at 7 PM.");
             const calendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${eventTitle}&dates=20250726T170000/20250726T220000&location=${eventLocation}&details=${eventDetails}`;
-            
             dateLeftElement.innerHTML = `<a href="${calendarUrl}" target="_blank" rel="noopener noreferrer">JULY 26TH, 2025</a>`;
             dateRightElement.innerHTML = `<a href="${calendarUrl}" target="_blank" rel="noopener noreferrer">5:00PM</a>`;
 
             gsap.timeline({repeat: -1, repeatDelay: 2.5})
-                .to(flickerElement, {
-                    duration: 0.1,
-                    opacity: 0.3,
-                    textShadow: '0 0 20px #10b981, 0 0 40px #10b981'
-                })
-                .to(flickerElement, { duration: 0.05, opacity: 1 })
-                .to(flickerElement, { duration: 0.05, opacity: 0.5, delay: 0.2 })
-                .to(flickerElement, { duration: 0.05, opacity: 1 })
-                .to(flickerElement, { duration: 0.1, opacity: 0.2, delay: 0.5 })
-                .to(flickerElement, { duration: 0.2, opacity: 1, textShadow: '0 0 10px #10b981, 0 0 20px #10b981' });
+                .to("#flicker-text", { duration: 0.1, opacity: 0.3, textShadow: '0 0 20px #10b981' })
+                .to("#flicker-text", { duration: 0.05, opacity: 1 })
+                .to("#flicker-text", { duration: 0.05, opacity: 0.5, delay: 0.2 })
+                .to("#flicker-text", { duration: 0.05, opacity: 1 })
+                .to("#flicker-text", { duration: 0.1, opacity: 0.2, delay: 0.5 })
+                .to("#flicker-text", { duration: 0.2, opacity: 1, textShadow: '0 0 10px #10b981' });
         }
         
-        // OPTIMIZED: Audio scheduling is now fully decoupled from the visual timeline.
         function scheduleAudioSequence() {
-            if (!audioInitialized) return;
-            
-            console.log('Scheduling audio sequence...');
-            
             const now = Tone.now();
-            
             Tone.Transport.bpm.value = 110;
-
-            // Schedule all events relative to the transport's start time for precision.
             droneSynth.triggerAttack("C1", now);
-
             const audioStartTime = now + 1.5;
-
-            const chordProgression = [
-                { time: "0:0", note: "Cm", duration: "1m" },
-                { time: "1:0", note: "Gm", duration: "1m" },
-                { time: "2:0", note: "Fm", duration: "1m" },
-                { time: "3:0", note: "Cm", duration: "1m" },
-                { time: "4:0", note: "Fm", duration: "1.5m" },
-                { time: "5:2", note: "Cm", duration: "1.5m" }
-            ];
-
+            const chordProgression = [{ time: "0:0", note: "Cm" }, { time: "1:0", note: "Gm" }, { time: "2:0", note: "Fm" }, { time: "3:0", note: "Cm" }];
             new Tone.Part((time, value) => {
-                let chord;
-                switch(value.note) {
-                    case "Cm": chord = ["C3", "Eb3", "G3"]; arp.values = ["C2", "Eb2", "G2", "C3"]; break;
-                    case "Gm": chord = ["G3", "Bb3", "D4"]; arp.values = ["G2", "Bb2", "D3", "G3"]; break;
-                    case "Fm": chord = ["F3", "Ab3", "C4"]; arp.values = ["F2", "Ab2", "C3", "F3"]; break;
-                }
-                padSynth.triggerAttackRelease(chord, value.duration, time);
+                let chord, arpNotes;
+                if (value.note === "Cm") { chord = ["C3", "Eb3", "G3"]; arpNotes = ["C2", "Eb2", "G2", "C3"]; }
+                else if (value.note === "Gm") { chord = ["G3", "Bb3", "D4"]; arpNotes = ["G2", "Bb2", "D3", "G3"]; }
+                else { chord = ["F3", "Ab3", "C4"]; arpNotes = ["F2", "Ab2", "C3", "F3"]; }
+                padSynth.triggerAttackRelease(chord, "1m", time);
+                arp.values = arpNotes;
             }, chordProgression).start(audioStartTime);
-
             arp.start(audioStartTime);
-            
-            const cinematicMelodySequence = new Tone.Sequence((time, note) => {
-                if (note) {
-                    cinematicLead.triggerAttackRelease(note, '2n', time);
-                    if (cinematicLead.voice0 && cinematicLead.voice0.filter) {
-                        cinematicLead.voice0.filter.frequency.setValueAtTime(800, time);
-                        // FIXED: Replaced exponentialRamp with linearRamp to prevent RangeError
-                        cinematicLead.voice0.filter.frequency.linearRampToValueAtTime(2400, time + 1.5);
-                    }
-                    if (cinematicLead.voice1 && cinematicLead.voice1.filter) {
-                        cinematicLead.voice1.filter.frequency.setValueAtTime(600, time);
-                        // FIXED: Replaced exponentialRamp with linearRamp to prevent RangeError
-                        cinematicLead.voice1.filter.frequency.linearRampToValueAtTime(1800, time + 1.5);
-                    }
-                }
-            }, [
-                null, null, 'C4', null, 'Eb4', null, 'G4', null,
-                'Bb4', null, 'G4', 'F4', 'Eb4', null, 'C4', null,
-                null, 'G4', 'F4', 'Eb4', 'D4', null, 'C4', null
-            ], '2n').start(now + 6.5);
-
-            cinematicMelodySequence.humanize = true;
-            cinematicMelodySequence.probability = 0.85;
-
+            new Tone.Sequence((time, note) => { if (note) cinematicLead.triggerAttackRelease(note, '2n', time); }, [null, null, 'C4', null, 'Eb4', null, 'G4', null, 'Bb4', null, 'G4', 'F4', 'Eb4', null, 'C4', null], '2n').start(now + 6.5);
             padSynth.volume.rampTo(-18, 0.1, audioStartTime);
-            if (padFilter) {
-                padFilter.frequency.rampTo(4000, 7, now + 2.0);
-            }
-            
-            // Schedule one-shot sounds with precise timing.
-            Tone.Transport.scheduleOnce((time) => {
-                climaxChime.triggerAttack(time);
-            }, 4.0); // Corresponds to GSAP start+=4.0
-
-            Tone.Transport.scheduleOnce((time) => {
-                disintegrateNoise.triggerAttack(time);
-            }, 13.5); // Corresponds to GSAP start+=13.5
-
-            // Schedule the final audio fade out.
-            const outroTime = now + 16.0; // A fixed time for the outro to start
-            Tone.Transport.scheduleOnce((time) => {
-                padSynth.volume.rampTo(-Infinity, 4, time);
-                cinematicLead.volume.rampTo(-Infinity, 5, time);
-                arp.stop(time + 3);
-                droneSynth.volume.rampTo(-Infinity, 6, time + 0.5);
-                Tone.Transport.stop(time + 8);
-            }, outroTime);
+            if (padFilter) padFilter.frequency.rampTo(4000, 7, now + 2.0);
+            Tone.Transport.scheduleOnce((t) => climaxChime.triggerAttack(t), 4.0);
+            Tone.Transport.scheduleOnce((t) => disintegrateNoise.triggerAttack(t), 13.5);
+            Tone.Transport.scheduleOnce((t) => {
+                padSynth.volume.rampTo(-Infinity, 4, t);
+                cinematicLead.volume.rampTo(-Infinity, 5, t);
+                arp.stop(t + 3);
+                droneSynth.volume.rampTo(-Infinity, 6, t + 0.5);
+                Tone.Transport.stop(t + 8);
+            }, now + 16.0);
         }
 
         function runOpeningSequence() {
-            const riddleOverlay = document.getElementById('riddle-overlay');
             const tl = gsap.timeline();
-
-            // Start audio and visuals simultaneously.
-            if (audioInitialized) {
-                scheduleAudioSequence();
-                Tone.Transport.start();
-            }
-
-            // Visual timeline remains unchanged.
-            tl.to(particles.material.uniforms.uExpansionProgress, {
-                value: 1.0,
-                duration: 6,
-                ease: 'power3.out'
-            }, "start");
-            
-            tl.to(particles.material.uniforms.uConvergenceProgress, {
-                value: 1.0,
-                duration: 8.5,
-                ease: 'power2.inOut'
-            }, "start+=4.0");
-
-            tl.to(particles.material.uniforms.uDisintegrationProgress, {
-                value: 1.0,
-                duration: 3.5, 
-                ease: 'power2.in'
-            }, "start+=13.5");
-
-            tl.to(riddleOverlay, {
-                opacity: 1,
-                duration: 1.5,
-                ease: 'power2.out',
-                onStart: () => {
-                    if (riddleOverlay) riddleOverlay.classList.add('visible');
-                }
-            }, ">-1.0");
+            tl.to(document.getElementById('background-canvas-container'), { opacity: 0.5, duration: 8, ease: 'power2.out' }, "start");
+            tl.to(fgParticles.material.uniforms.uExpansionProgress, { value: 1.0, duration: 6, ease: 'power3.out' }, "start");
+            tl.to(fgParticles.material.uniforms.uConvergenceProgress, { value: 1.0, duration: 8.5, ease: 'power2.inOut' }, "start+=4.0");
+            tl.to(fgParticles.material.uniforms.uDisintegrationProgress, { value: 1.0, duration: 3.5, ease: 'power2.in' }, "start+=13.5");
+            tl.to(document.getElementById('riddle-overlay'), { opacity: 1, duration: 1.5, ease: 'power2.out', onStart: () => { document.getElementById('riddle-overlay').classList.add('visible'); } }, ">-1.0");
         }
         
         function onWindowResize() {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            
-            camera.aspect = width / height;
-            camera.updateProjectionMatrix();
-            renderer.setSize(width, height);
-            composer.setSize(width, height);
-
-            if(particleCamera) {
-                particleCamera.aspect = width / height;
-                particleCamera.updateProjectionMatrix();
-            }
-            if(particleRenderer) {
-                particleRenderer.setSize(width, height);
-            }
-            if(particleComposer) {
-                particleComposer.setSize(width, height);
-            }
-            
-            if (sextantCubeCamera) {
-                const sextantCanvas = document.getElementById('sextant-cube-canvas');
-                if (sextantCanvas) {
-                    const size = 40;
-                    sextantCubeCamera.aspect = 1;
-                    sextantCubeCamera.updateProjectionMatrix();
-                    if(sextantCubeRenderer) {
-                        sextantCubeRenderer.setSize(size, size);
-                    }
-                }
-            }
-            
-            // Apply adaptive pixel ratio on resize
-            const adaptivePixelRatio = Math.min(window.devicePixelRatio * adaptiveQuality, 2);
-            if (renderer) renderer.setPixelRatio(adaptivePixelRatio);
-            if (particleRenderer) particleRenderer.setPixelRatio(adaptivePixelRatio);
+            const width = window.innerWidth, height = window.innerHeight;
+            fgCamera.aspect = width / height;
+            fgCamera.updateProjectionMatrix();
+            fgRenderer.setSize(width, height);
+            fgComposer.setSize(width, height);
+            bgCamera.aspect = width / height;
+            bgCamera.updateProjectionMatrix();
+            bgRenderer.setSize(width, height);
+            bgComposer.setSize(width, height);
+            applyAdaptiveSettings(); // Re-apply quality settings on resize
         }
 
-        // Animation with smart performance optimization and finale background effects
-        let lastTimeUpdate = 0;
-        const TIME_UPDATE_INTERVAL = 16;
-        let animationId;
+        let lastRenderTime = 0;
+        function animate(now) {
+            requestAnimationFrame(animate);
+            monitorPerformance(now);
+            
+            // --- OPTIMIZATION: Only render if enough time has passed, based on performance level ---
+            const requiredElapsed = performanceLevel === 'low' ? 30 : 16; // ~33fps or ~60fps
+            if (now - lastRenderTime < requiredElapsed) {
+                return;
+            }
+            lastRenderTime = now;
 
-        function animate() {
-            animationId = requestAnimationFrame(animate);
-            
-            // Performance monitoring
-            monitorPerformance();
-            
             const elapsedTime = clock.getElapsedTime();
-            const now = performance.now();
             
-            if (activeScene === 'title' && particles) {
-                // Smart time update based on performance
-                const updateInterval = performanceLevel === 'low' ? 32 : TIME_UPDATE_INTERVAL;
-                
-                if (now - lastTimeUpdate > updateInterval) {
-                    particles.material.uniforms.uTime.value = elapsedTime;
-                    lastTimeUpdate = now;
-                }
-                particles.material.uniforms.uDisperse.value = visualFeedback.disperse;
-                if (bloomPass) {
-                    // Adaptive bloom quality
-                    bloomPass.strength = (0.6 + visualFeedback.glow) * adaptiveQuality;
-                }
-                composer.render();
-            } else if (activeScene === 'secret') {
-                if (backgroundVisual) {
-                    backgroundVisual.material.uniforms.uTime.value = elapsedTime;
-                    
-                    // Adaptive rotation speed based on performance
-                    const rotationSpeed = adaptiveQuality;
-                    backgroundVisual.rotation.z += 3e-5 * rotationSpeed;
-                    backgroundVisual.rotation.x += 1e-5 * rotationSpeed;
-                    backgroundVisual.rotation.y += 2e-5 * rotationSpeed;
-                }
-                if (particleCamera) {
-                    // Enhanced camera movement for cinematic feel
-                    particleCamera.position.z = 2 + Math.sin(elapsedTime * 0.1) * 0.2;
-                    particleCamera.position.x = Math.sin(elapsedTime * 0.06) * 0.1;
-                    particleCamera.position.y = Math.cos(elapsedTime * 0.08) * 0.08;
-                }
-                particleComposer.render();
+            // Always render background, it's less expensive
+            if (bgRippleVisual) {
+                bgRippleVisual.material.uniforms.uTime.value = elapsedTime;
+                bgRippleVisual.rotation.z += 3e-5 * adaptiveQuality;
+                bgComposer.render();
             }
 
+            if (activeScene === 'title' && fgParticles) {
+                fgParticles.material.uniforms.uTime.value = elapsedTime;
+                fgParticles.material.uniforms.uDisperse.value = visualFeedback.disperse;
+                fgComposer.render();
+            }
+            
             if (sextantCube && activeScene === 'secret') {
-                // Adaptive cube rotation based on performance
-                const rotSpeed = adaptiveQuality;
-                sextantCube.rotation.x += 0.01 * rotSpeed;
-                sextantCube.rotation.y += 0.015 * rotSpeed;
-                sextantCube.rotation.z += 0.005 * rotSpeed;
+                sextantCube.rotation.x += 0.01 * adaptiveQuality;
+                sextantCube.rotation.y += 0.015 * adaptiveQuality;
                 sextantCubeRenderer.render(sextantCubeScene, sextantCubeCamera);
             }
         }
@@ -2059,29 +1392,20 @@
     function copyCode(event) {
         event.preventDefault(); 
         event.stopPropagation();
-
         const code = document.getElementById('access-code-text').innerText;
-        
+        const textArea = document.createElement("textarea");
+        textArea.value = code;
+        document.body.appendChild(textArea);
+        textArea.select();
         try {
-            const textArea = document.createElement("textarea");
-            textArea.value = code;
-            textArea.style.position = "fixed"; 
-            textArea.style.top = "0";
-            textArea.style.left = "0";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
             document.execCommand('copy');
-            document.body.removeChild(textArea);
-
             const notification = document.getElementById('copy-notification');
             notification.classList.add('show');
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 2000);
+            setTimeout(() => notification.classList.remove('show'), 2000);
         } catch (err) {
-            console.error('Fallback: Oops, unable to copy', err);
+            console.error('Copy to clipboard failed', err);
         }
+        document.body.removeChild(textArea);
     }
     </script>
 </body>
