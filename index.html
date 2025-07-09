@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- FIX: Removed user-scalable=no to resolve linter warnings and improve accessibility where possible. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Surface Tension</title>
     
@@ -646,7 +645,7 @@
             <span class="event-date-text" id="event-date-right"></span>
         </div>
         <h1 id="animated-text"></h1>
-        <p id="subtext"><span id="flicker-text">Digital Drip</span> x <span class="subheading-rave">An After-Hours Art Rave</span></p>
+        <p id="subtext"><span id="flicker-text">Digital Drip</span>: <span class="subheading-rave">An After-Hours Art Rave</span></p>
         
         <a id="ticket-button" href="https://www.eventbrite.com/e/surface-tension-digital-drip-an-after-hours-art-rave-tickets-1471279469499?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl" target="_blank" rel="noopener noreferrer" aria-label="Purchase Tickets">
             TICKETS
@@ -763,12 +762,15 @@
             const newPixelRatio = Math.min(window.devicePixelRatio * adaptiveQuality, 1.5);
             if (fgRenderer) fgRenderer.setPixelRatio(newPixelRatio);
             if (bgRenderer) bgRenderer.setPixelRatio(newPixelRatio);
-            // FIX: Adjust bloom strength with adaptive quality
             if (bloomPass) bloomPass.strength = 0.4 * adaptiveQuality;
             
-            // Update shader uniform for performance
-            if (fgParticles) fgParticles.material.uniforms.uPerformance.value = performanceLevel === 'low' ? 0.0 : 1.0;
-            if (bgRippleVisual) bgRippleVisual.material.uniforms.uPerformance.value = performanceLevel === 'low' ? 0.0 : 1.0;
+            // FIX: Add checks for uniform existence to prevent crash on init race condition.
+            if (fgParticles && fgParticles.material.uniforms.uPerformance) {
+                fgParticles.material.uniforms.uPerformance.value = performanceLevel === 'low' ? 0.0 : 1.0;
+            }
+            if (bgRippleVisual && bgRippleVisual.material.uniforms.uPerformance) {
+                bgRippleVisual.material.uniforms.uPerformance.value = performanceLevel === 'low' ? 0.0 : 1.0;
+            }
         }
 
         // --- Optimized Particle Count ---
@@ -926,26 +928,30 @@
 
         const backgroundVertexShader = `
             uniform float uTime;
-            uniform float uPerformance; // 0.0 for low, 1.0 for high
+            attribute float aParticleType;
             varying float vAlpha;
             varying vec3 vColor;
-            void main() {
-                vec4 p = vec4(position, 1.0);
-                float dist = length(p.xy);
-                
-                // VERCEL LAG FIX: Simpler ripple on low-end devices
-                float ripple1 = sin(dist * 1.2 - uTime * 0.15) * 1.5 * exp(-dist * 0.1);
-                float ripple2 = 0.0;
-                if (uPerformance > 0.5) {
-                    ripple2 = sin(dist * 2.5 - uTime * 0.25) * 0.8 * exp(-dist * 0.15);
-                }
-                p.z += ripple1 + ripple2;
 
-                vec4 mvPosition = modelViewMatrix * p;
+            void main() {
+                // Use aParticleType to vary color, same as original
+                vec3 greenHaloColor = vec3(0.06, 0.9, 0.6);
+                vec3 greenCenterColor = vec3(0.8, 1.0, 0.9);
+                vec3 platinumHaloColor = vec3(0.7, 0.75, 0.85);
+                vec3 platinumCenterColor = vec3(1.0, 1.0, 1.0);
+
+                vec3 greenColor = mix(greenCenterColor, greenHaloColor, 0.5);
+                vec3 platinumColor = mix(platinumCenterColor, platinumHaloColor, 0.5);
+                vColor = mix(greenColor, platinumColor, aParticleType) * 1.2; // Brighter
+
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                
+                // This is the ripple effect from slide 10
+                float dist = length(mvPosition.xy);
+                mvPosition.z += sin(dist * 1.2 - uTime * 0.15) * 1.5 * exp(-dist * 0.1);
+
                 float zFactor = 1.0 - clamp(abs(mvPosition.z / 20.0), 0.0, 1.0);
                 gl_PointSize = (zFactor * zFactor) * 2.0 + 0.5;
-                vAlpha = zFactor * 0.7;
-                vColor = mix(vec3(0.06, 0.9, 0.6), vec3(0.7, 0.75, 0.85), sin(uTime + position.x) * 0.5 + 0.5);
+                vAlpha = zFactor * 1.2; // Brighter
                 gl_Position = projectionMatrix * mvPosition;
             }
         `;
@@ -953,11 +959,14 @@
         const backgroundFragmentShader = `
             varying float vAlpha;
             varying vec3 vColor;
+
             void main() {
                 float dist = distance(gl_PointCoord, vec2(0.5));
                 if (dist > 0.5) discard;
                 float strength = 1.0 - dist * 2.0;
-                gl_FragColor = vec4(vColor, strength * vAlpha);
+                // Clamp to prevent blown-out background
+                vec3 finalColor = clamp(vColor, 0.0, 1.5);
+                gl_FragColor = vec4(finalColor, strength * vAlpha);
             }
         `;
         
@@ -1107,21 +1116,34 @@
             bgCamera.position.z = 2;
             bgRenderer = new THREE.WebGLRenderer({ canvas: document.getElementById('background-canvas'), antialias: performanceLevel !== 'low', alpha: true });
             bgRenderer.setSize(window.innerWidth, window.innerHeight);
-            const pCount = getAdaptiveParticleCount(50000);
+            const pCount = getAdaptiveParticleCount(80000); // Use a higher base count
             const geometry = new THREE.BufferGeometry();
             const pos = new Float32Array(pCount * 3);
+            const particleTypes = new Float32Array(pCount); // For color variation
             for (let i = 0; i < pCount; i++) {
-                const r = Math.random() * 30, a = Math.random() * Math.PI * 2;
-                pos.set([r * Math.cos(a), r * Math.sin(a), (Math.random() - .5) * 12], i * 3);
+                const i3 = i * 3;
+                const r = Math.random() * 30;
+                const a = Math.random() * Math.PI * 2;
+                pos.set([r * Math.cos(a), r * Math.sin(a), (Math.random() - .5) * 12], i3);
+                particleTypes[i] = Math.random() < 0.2 ? 1.0 : 0.0;
             }
             geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-            const material = new THREE.ShaderMaterial({ vertexShader: backgroundVertexShader, fragmentShader: backgroundFragmentShader, uniforms: { uTime: { value: 0 }, uPerformance: { value: 1.0 } }, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false });
+            geometry.setAttribute('aParticleType', new THREE.BufferAttribute(particleTypes, 1));
+            
+            const material = new THREE.ShaderMaterial({ 
+                vertexShader: backgroundVertexShader, 
+                fragmentShader: backgroundFragmentShader, 
+                uniforms: { uTime: { value: 0 } }, 
+                blending: THREE.AdditiveBlending, 
+                transparent: true, 
+                depthWrite: false 
+            });
             bgRippleVisual = new THREE.Points(geometry, material);
             bgScene.add(bgRippleVisual);
             bgComposer = new THREE.EffectComposer(bgRenderer);
             bgComposer.addPass(new THREE.RenderPass(bgScene, bgCamera));
             if (performanceLevel === 'high') { // Only use extra bloom on high-end
-                const secretBloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.3, 0.5, 0.1);
+                const secretBloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.6, 0.2);
                 bgComposer.addPass(secretBloomPass);
             }
         }
@@ -1215,10 +1237,42 @@
         }
 
         function handleTyping(e) { if (isTransitioning) return; const currentInput = e.target.value.toUpperCase(); const matchCount = (currentInput.match(/^L?I?M?I?N?A?L?/) || [''])[0].length; gsap.to(visualFeedback, { glow: (matchCount / 7) * 0.6, duration: 0.5, ease: 'power2.out' }); if (CORRECT_PASSWORDS.includes(currentInput)) checkPassword(true); }
-        function checkPassword(isAutoTrigger = false) { if (isTransitioning) return; const passwordInput = document.getElementById('password-input'); if (isAutoTrigger || CORRECT_PASSWORDS.includes(passwordInput.value.toUpperCase().trim())) { isTransitioning = true; passwordInput.blur(); gsap.to(visualFeedback, { glow: 1.5, duration: 0.5, ease: 'power2.out' }); transitionToSecretPage(); } else { const form = document.getElementById('password-form'); form.classList.add('error'); passwordInput.value = ''; setTimeout(() => form.classList.remove('error'), 500); gsap.to(visualFeedback, { disperse: 5.0, duration: 0.75, ease: 'elastic.out(1, 0.5)', onComplete: () => gsap.to(visualFeedback, {disperse: 0, duration: 0.5}) }); } }
+        
+        function checkPassword(isAutoTrigger = false) { 
+            if (isTransitioning) return; 
+            const passwordInput = document.getElementById('password-input'); 
+            if (isAutoTrigger || CORRECT_PASSWORDS.includes(passwordInput.value.toUpperCase().trim())) { 
+                isTransitioning = true; 
+                passwordInput.blur(); 
+                gsap.to(visualFeedback, { glow: 1.5, duration: 0.5, ease: 'power2.out' }); 
+                transitionToSecretPage(); 
+            } else { 
+                const form = document.getElementById('password-form'); 
+                form.classList.add('error'); 
+                passwordInput.value = ''; 
+                setTimeout(() => form.classList.remove('error'), 500); 
+                // Restore the "wrong answer" particle animation
+                gsap.to(visualFeedback, { 
+                    disperse: 5.0, 
+                    duration: 0.75, 
+                    ease: 'elastic.out(1, 0.5)', 
+                    onComplete: () => gsap.to(visualFeedback, {disperse: 0, duration: 0.5}) 
+                }); 
+            } 
+        }
+
         function startTextAnimation() { const textElement = document.getElementById('animated-text'); const dateLeftElement = document.getElementById('event-date-left'); const dateRightElement = document.getElementById('event-date-right'); if (!textElement || !dateLeftElement || !dateRightElement) return; textElement.textContent = "SURFACE TENSION"; const eventTitle = encodeURIComponent("SURFACE TENSION - DIGITAL DRIP AT SEXTANT"); const eventLocation = encodeURIComponent("539 Valencia Street, San Francisco, CA"); const eventDetails = encodeURIComponent("Experience the intersection of digital art and specialty coffee. An immersive art showcase from 5:00 PM to 6:30 PM, transitioning into a vibrant rave space with a live DJ set at 7 PM."); const calendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${eventTitle}&dates=20250726T170000/20250726T220000&location=${eventLocation}&details=${eventDetails}`; dateLeftElement.innerHTML = `<a href="${calendarUrl}" target="_blank" rel="noopener noreferrer">JULY 26TH, 2025</a>`; dateRightElement.innerHTML = `<a href="${calendarUrl}" target="_blank" rel="noopener noreferrer">5:00PM</a>`; gsap.timeline({repeat: -1, repeatDelay: 2.5}).to("#flicker-text", { duration: 0.1, opacity: 0.3, textShadow: '0 0 20px #10b981' }).to("#flicker-text", { duration: 0.05, opacity: 1 }).to("#flicker-text", { duration: 0.05, opacity: 0.5, delay: 0.2 }).to("#flicker-text", { duration: 0.05, opacity: 1 }).to("#flicker-text", { duration: 0.1, opacity: 0.2, delay: 0.5 }).to("#flicker-text", { duration: 0.2, opacity: 1, textShadow: '0 0 10px #10b981' }); }
         function scheduleAudioSequence() { const now = Tone.now(); Tone.Transport.bpm.value = 110; droneSynth.triggerAttack("C1", now); const audioStartTime = now + 1.5; const chordProgression = [{ time: "0:0", note: "Cm" }, { time: "1:0", note: "Gm" }, { time: "2:0", note: "Fm" }, { time: "3:0", note: "Cm" }]; new Tone.Part((time, value) => { let chord, arpNotes; if (value.note === "Cm") { chord = ["C3", "Eb3", "G3"]; arpNotes = ["C2", "Eb2", "G2", "C3"]; } else if (value.note === "Gm") { chord = ["G3", "Bb3", "D4"]; arpNotes = ["G2", "Bb2", "D3", "G3"]; } else { chord = ["F3", "Ab3", "C4"]; arpNotes = ["F2", "Ab2", "C3", "F3"]; } padSynth.triggerAttackRelease(chord, "1m", time); arp.values = arpNotes; }, chordProgression).start(audioStartTime); arp.start(audioStartTime); new Tone.Sequence((time, note) => { if (note) cinematicLead.triggerAttackRelease(note, '2n', time); }, [null, null, 'C4', null, 'Eb4', null, 'G4', null, 'Bb4', null, 'G4', 'F4', 'Eb4', null, 'C4', null], '2n').start(now + 6.5); padSynth.volume.rampTo(-18, 0.1, audioStartTime); if (padFilter) padFilter.frequency.rampTo(4000, 7, now + 2.0); Tone.Transport.scheduleOnce((t) => climaxChime.triggerAttack(t), 4.0); Tone.Transport.scheduleOnce((t) => disintegrateNoise.triggerAttack(t), 13.5); Tone.Transport.scheduleOnce((t) => { padSynth.volume.rampTo(-Infinity, 4, t); cinematicLead.volume.rampTo(-Infinity, 5, t); arp.stop(t + 3); droneSynth.volume.rampTo(-Infinity, 6, t + 0.5); Tone.Transport.stop(t + 8); }, now + 16.0); }
-        function runOpeningSequence() { const tl = gsap.timeline(); tl.to(document.getElementById('background-canvas-container'), { opacity: 0.5, duration: 8, ease: 'power2.out' }, "start"); tl.to(fgParticles.material.uniforms.uExpansionProgress, { value: 1.0, duration: 6, ease: 'power3.out' }, "start"); tl.to(fgParticles.material.uniforms.uConvergenceProgress, { value: 1.0, duration: 8.5, ease: 'power2.inOut' }, "start+=4.0"); tl.to(fgParticles.material.uniforms.uDisintegrationProgress, { value: 1.0, duration: 3.5, ease: 'power2.in' }, "start+=13.5"); tl.to(document.getElementById('riddle-overlay'), { opacity: 1, duration: 1.5, ease: 'power2.out', onStart: () => { document.getElementById('riddle-overlay').classList.add('visible'); } }, ">-1.0"); }
+        
+        function runOpeningSequence() { 
+            const tl = gsap.timeline(); 
+            tl.to(document.getElementById('background-canvas-container'), { opacity: 0.5, duration: 10, ease: 'power2.out' }, "start"); 
+            tl.to(fgParticles.material.uniforms.uExpansionProgress, { value: 1.0, duration: 8, ease: 'power3.out' }, "start"); 
+            tl.to(fgParticles.material.uniforms.uConvergenceProgress, { value: 1.0, duration: 10, ease: 'power2.inOut' }, "start+=5.0"); 
+            tl.to(fgParticles.material.uniforms.uDisintegrationProgress, { value: 1.0, duration: 4, ease: 'power2.in' }, "start+=16.0"); 
+            tl.to(document.getElementById('riddle-overlay'), { opacity: 1, duration: 2, ease: 'power2.out', onStart: () => { document.getElementById('riddle-overlay').classList.add('visible'); } }, ">-1.5"); 
+        }
+
         function onWindowResize() { const width = window.innerWidth, height = window.innerHeight; fgCamera.aspect = width / height; fgCamera.updateProjectionMatrix(); fgRenderer.setSize(width, height); if(fgComposer) fgComposer.setSize(width, height); bgCamera.aspect = width / height; bgCamera.updateProjectionMatrix(); bgRenderer.setSize(width, height); if(bgComposer) bgComposer.setSize(width, height); applyAdaptiveSettings(); }
 
         let lastRenderTime = 0;
