@@ -43,26 +43,18 @@
             -moz-osx-font-smoothing: grayscale;
             line-height: 1.6;
             min-height: 100vh;
+            overscroll-behavior: none; /* Prevents pull-to-refresh on mobile */
         }
 
         /* --- Background Visual --- */
-        .background-visual {
+        .canvas-container {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             z-index: -1;
-            background-image: url('https://placehold.co/1920x1080/000000/111111?text=');
-            background-size: cover;
-            background-position: center;
-            opacity: 0;
-            filter: grayscale(80%) blur(2px);
-            animation: fadeInBg 3s 0.5s ease-in-out forwards;
-        }
-        
-        @keyframes fadeInBg {
-            to { opacity: 0.2; }
+            opacity: 0.8; /* Increased opacity for more presence */
         }
 
         /* --- Main Layout & Content --- */
@@ -230,7 +222,6 @@
         }
 
         .link-item.tickets a { --glow-color: var(--color-purple); }
-        .link-item.founders a { --glow-color: var(--color-teal); }
         .link-item.social a { --glow-color: var(--color-silver); }
 
         .link-item a {
@@ -279,7 +270,7 @@
             width: 100%;
         }
 
-        .link-item.tickets a, .link-item.founders a {
+        .link-item.tickets a {
             flex-direction: column;
             align-items: center;
             text-align: center;
@@ -287,7 +278,7 @@
             gap: 0.5rem;
         }
         
-        .link-item.tickets .link-text, .link-item.founders .link-text {
+        .link-item.tickets .link-text {
             font-size: 1.2rem;
             letter-spacing: 0.05em;
         }
@@ -310,10 +301,21 @@
         }
 
     </style>
+    <!-- Library Loading: Deferred for non-blocking rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js" defer></script>
 </head>
 <body>
 
-    <div class="background-visual"></div>
+    <div id="background-canvas-container" class="canvas-container">
+        <canvas id="background-canvas"></canvas>
+    </div>
 
     <main class="container">
         <header class="header">
@@ -331,13 +333,7 @@
                 <div class="link-item tickets">
                     <a href="https://www.eventbrite.com/e/surface-tension-digital-drip-an-after-hours-art-rave-tickets-1471279469499?aff=oddtdtcreator" target="_blank" rel="noopener noreferrer">
                         <span class="link-text">Tickets</span>
-                        <span class="sub-text">General Availability - July 16</span>
-                    </a>
-                </div>
-                <div class="link-item founders">
-                    <a href="https://surfacetension.co" target="_blank" rel="noopener noreferrer">
-                        <span class="link-text">Founders Access</span>
-                        <span class="sub-text">Solve the Riddle for Early Access</span>
+                        <span class="sub-text">Limited Availability</span>
                     </a>
                 </div>
             </div>
@@ -368,16 +364,6 @@
                     </a>
                 </div>
                 <div class="link-item social">
-                    <a href="https://surfacetension.co" target="_blank" rel="noopener noreferrer">
-                        <span class="link-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c1.356 0 2.673-.11 3.955-.329M12 21c-1.356 0-2.673-.11-3.955-.329m0 0a9.006 9.006 0 01-5.68-2.042M12 3c1.356 0 2.673.11 3.955.329m-3.955-.329a9.006 9.006 0 00-5.68 2.042m11.362 0a9.006 9.006 0 01-5.68 2.042" />
-                            </svg>
-                        </span>
-                        <span class="link-text">Website</span>
-                    </a>
-                </div>
-                <div class="link-item social">
                     <a href="https://x.com/surfacetensi_o" target="_blank" rel="noopener noreferrer">
                         <span class="link-icon">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
@@ -385,6 +371,16 @@
                             </svg>
                         </span>
                         <span class="link-text">X (Twitter)</span>
+                    </a>
+                </div>
+                <div class="link-item social">
+                    <a href="https://surfacetension.co" target="_blank" rel="noopener noreferrer">
+                        <span class="link-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c1.356 0 2.673-.11 3.955-.329M12 21c-1.356 0-2.673-.11-3.955-.329m0 0a9.006 9.006 0 01-5.68-2.042M12 3c1.356 0 2.673.11 3.955.329m-3.955-.329a9.006 9.006 0 00-5.68 2.042m11.362 0a9.006 9.006 0 01-5.68 2.042" />
+                            </svg>
+                        </span>
+                        <span class="link-text">Website</span>
                     </a>
                 </div>
                 <div class="link-item social">
@@ -405,10 +401,219 @@
         </div>
     </main>
 
-    <script>
+    <script type="module">
+    // Use DOMContentLoaded for faster script execution
     document.addEventListener('DOMContentLoaded', () => {
-        // All the JS logic can go here.
-        // For this page, most of the magic is in the CSS animations and transitions.
+        
+        // Robustly check for libraries before initializing the main scene
+        function checkAndInit() {
+            if (window.THREE && window.gsap) {
+                main();
+            } else {
+                // Poll until libraries are loaded
+                setTimeout(checkAndInit, 50);
+            }
+        }
+
+        function main() {
+            // --- Global State ---
+            const clock = new THREE.Clock();
+            
+            // --- Scene Variables ---
+            let bgScene, bgCamera, bgRenderer, bgComposer, bgRippleVisual;
+            
+            // --- VERCEL PERFORMANCE: Enhanced Device Capability Detection ---
+            const getPerformanceTier = () => {
+                const ua = navigator.userAgent;
+                const isMobile = /Mobi|Android|iPhone/i.test(ua);
+                const screenArea = window.innerWidth * window.innerHeight * window.devicePixelRatio;
+                const memory = navigator.deviceMemory || 2;
+
+                if (isMobile || screenArea < 1000000 || memory < 4) return 'low';
+                if (screenArea < 2500000 || memory < 8) return 'medium';
+                return 'high';
+            };
+
+            const performanceLevel = getPerformanceTier();
+            
+            // --- Optimized Particle Count ---
+            function getAdaptiveParticleCount(baseCount) {
+                 if (performanceLevel === 'low') return Math.floor(baseCount * 0.3);
+                 if (performanceLevel === 'medium') return Math.floor(baseCount * 0.6);
+                 return baseCount;
+            }
+
+            // --- Debounce Utility ---
+            function debounce(func, wait) {
+                let timeout;
+                return function(...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), wait);
+                };
+            }
+
+            /*
+             * ==================================
+             * == SHADER CODE (BACKGROUND)    ==
+             * ==================================
+             */
+            const backgroundVertexShader = `
+                uniform float uTime;
+                uniform float uRippleProgress;
+                uniform float uRippleMix;
+                attribute float aParticleType;
+                varying float vAlpha;
+                varying vec3 vColor;
+
+                void main() {
+                    vec3 greenHaloColor = vec3(0.06, 0.9, 0.6);
+                    vec3 greenCenterColor = vec3(0.8, 1.0, 0.9);
+                    vec3 platinumHaloColor = vec3(0.7, 0.75, 0.85);
+                    vec3 platinumCenterColor = vec3(1.0, 1.0, 1.0);
+
+                    vec3 greenColor = mix(greenCenterColor, greenHaloColor, 0.5);
+                    vec3 platinumColor = mix(platinumCenterColor, platinumHaloColor, 0.5);
+                    vColor = mix(greenColor, platinumColor, aParticleType) * 1.2;
+
+                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                    float dist = length(mvPosition.xy);
+                    float originalAnimZ = sin(dist * 1.2 - uTime * 0.15) * 1.5 * exp(-dist * 0.1);
+                    float rippleTravel = uRippleProgress * 80.0;
+                    float rippleWidth = 7.0;
+                    float rippleAmplitude = 10.0;
+                    float profile = sin((dist - rippleTravel) / rippleWidth * 3.14159);
+                    profile = max(0.0, profile);
+                    profile = pow(profile, 2.0);
+                    float cinematicAnimZ = profile * rippleAmplitude;
+                    mvPosition.z += mix(originalAnimZ, cinematicAnimZ, uRippleMix);
+                    float zFactor = 1.0 - clamp(abs(mvPosition.z / 20.0), 0.0, 1.0);
+                    gl_PointSize = (zFactor * zFactor) * 3.0 + 1.0; /* Increased particle size */
+                    vAlpha = zFactor * 1.2;
+                    gl_Position = projectionMatrix * mvPosition;
+                }
+            `;
+
+            const backgroundFragmentShader = `
+                varying float vAlpha;
+                varying vec3 vColor;
+                void main() {
+                    float dist = distance(gl_PointCoord, vec2(0.5));
+                    if (dist > 0.5) discard;
+                    float strength = 1.0 - dist * 2.0;
+                    vec3 finalColor = clamp(vColor, 0.0, 1.5);
+                    gl_FragColor = vec4(finalColor, strength * vAlpha);
+                }
+            `;
+            
+            // --- Scene and Visuals Setup ---
+            function init() {
+                initBackgroundScene();
+                setupEventListeners();
+                animate();
+                startMasterAnimationSequence();
+            }
+            
+            function initBackgroundScene() {
+                bgScene = new THREE.Scene();
+                bgCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                bgCamera.position.z = 2;
+                bgRenderer = new THREE.WebGLRenderer({ canvas: document.getElementById('background-canvas'), antialias: performanceLevel !== 'low', alpha: true });
+                bgRenderer.setSize(window.innerWidth, window.innerHeight);
+                bgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                
+                const pCount = getAdaptiveParticleCount(80000);
+                const geometry = new THREE.BufferGeometry();
+                const pos = new Float32Array(pCount * 3);
+                const particleTypes = new Float32Array(pCount);
+                for (let i = 0; i < pCount; i++) {
+                    const i3 = i * 3;
+                    const r = Math.random() * 30;
+                    const a = Math.random() * Math.PI * 2;
+                    pos.set([r * Math.cos(a), r * Math.sin(a), (Math.random() - .5) * 12], i3);
+                    particleTypes[i] = Math.random() < 0.2 ? 1.0 : 0.0;
+                }
+                geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                geometry.setAttribute('aParticleType', new THREE.BufferAttribute(particleTypes, 1));
+                
+                const material = new THREE.ShaderMaterial({ 
+                    vertexShader: backgroundVertexShader, 
+                    fragmentShader: backgroundFragmentShader, 
+                    uniforms: { 
+                        uTime: { value: 0 },
+                        uRippleProgress: { value: 0 },
+                        uRippleMix: { value: 0 }
+                    }, 
+                    blending: THREE.AdditiveBlending, 
+                    transparent: true, 
+                    depthWrite: false 
+                });
+                bgRippleVisual = new THREE.Points(geometry, material);
+                bgScene.add(bgRippleVisual);
+                bgComposer = new THREE.EffectComposer(bgRenderer);
+                bgComposer.addPass(new THREE.RenderPass(bgScene, bgCamera));
+                if (performanceLevel === 'high') {
+                    const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.6, 0.2);
+                    bgComposer.addPass(bloomPass);
+                }
+            }
+
+            function setupEventListeners() {
+                window.addEventListener('resize', debounce(onWindowResize, 200), false);
+            }
+
+            function startMasterAnimationSequence() {
+                const uniforms = bgRippleVisual.material.uniforms;
+                function runRippleCycle() {
+                    uniforms.uRippleProgress.value = 0;
+                    gsap.timeline({
+                        onComplete: () => {
+                            setTimeout(runRippleCycle, 8000);
+                        }
+                    })
+                    .to(uniforms.uRippleProgress, {
+                        value: 1,
+                        duration: 20,
+                        ease: "power1.inOut"
+                    })
+                    .fromTo(uniforms.uRippleMix, { value: 0 }, {
+                        value: 1,
+                        duration: 7,
+                        ease: "sine.in"
+                    }, 0)
+                    .to(uniforms.uRippleMix, {
+                        value: 0,
+                        duration: 7,
+                        ease: "sine.out"
+                    }, ">-7");
+                }
+                setTimeout(runRippleCycle, 6000);
+            }
+            
+            function onWindowResize() { 
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                bgCamera.aspect = width / height; 
+                bgCamera.updateProjectionMatrix(); 
+                bgRenderer.setSize(width, height); 
+                bgComposer.setSize(width, height);
+                bgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            }
+
+            function animate() {
+                requestAnimationFrame(animate);
+                const elapsedTime = clock.getElapsedTime();
+                if (bgRippleVisual) {
+                    bgRippleVisual.material.uniforms.uTime.value = elapsedTime;
+                    bgComposer.render();
+                }
+            }
+            
+            // Initialize the application
+            init();
+        }
+
+        // Start the process
+        checkAndInit();
     });
     </script>
 </body>
