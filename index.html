@@ -2,17 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Surface Tension</title>
     
     <!-- FAVICON: Custom SVG favicon for the brand -->
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M20 25 C20 15, 30 15, 40 25 L60 75 C70 85, 80 85, 80 75' stroke='%23FFFFFF' stroke-width='10' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M45 50 L75 50' stroke='%23FFFFFF' stroke-width='10' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 
-    <!-- Core libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <!-- Preconnect for faster font loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://use.typekit.net" crossorigin>
     
-    <!-- Font for the brand name -->
+    <!-- Fonts -->
     <link rel="stylesheet" href="https://use.typekit.net/jhs3mli.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
 
@@ -28,6 +28,19 @@
             width: 100vw;
             overflow: hidden;
             background-color: #000000; /* Pure black for maximum contrast */
+            color: white;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* --- Optimization: Smooth Fade-in --- */
+        /* Start with elements invisible */
+        .content-hidden {
+            opacity: 0;
+        }
+        /* Fade-in animation for a smoother load */
+        .content-visible {
+            opacity: 1;
+            transition: opacity 1.5s ease-in;
         }
 
         #vfx-canvas-container {
@@ -60,7 +73,7 @@
             text-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
         }
 
-        /* --- UI Elements from Reference --- */
+        /* --- UI Elements --- */
         #social-links-container {
             position: fixed;
             bottom: 2rem;
@@ -166,303 +179,299 @@
     </style>
 </head>
 <body>
-    <div id="vfx-canvas-container"></div>
-    <div id="text-container">
+    <!-- Start with content hidden, make visible with JS -->
+    <div id="vfx-canvas-container" class="content-hidden"></div>
+    <div id="text-container" class="content-hidden">
         <h1>SURFACE TENSION</h1>
     </div>
 
-    <!-- UI Elements from Reference -->
-    <div id="social-links-container">
+    <div id="social-links-container" class="content-hidden">
         <a href="https://www.instagram.com/surfacetension.co" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.85s-.011 3.584-.069 4.85c-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07s-3.584-.012-4.85-.07c-3.252-.148-4.771-1.691-4.919-4.919-.058-1.265-.07-1.645-.07-4.85s.012-3.584.07-4.85c.148-3.225 1.664-4.771 4.919-4.919C8.416 2.175 8.796 2.163 12 2.163zm0 1.802c-3.143 0-3.505.012-4.73.068-2.693.123-3.995 1.424-4.118 4.118-.056 1.225-.068 1.586-.068 4.73s.012 3.505.068 4.73c.123 2.693 1.424 3.995 4.118 4.118 1.225.056 1.586.068 4.73.068s3.505-.012 4.73-.068c2.693-.123 3.995-1.424 4.118-4.118.056-1.225.068-1.586.068-4.73s-.012-3.505-.068-4.73c-.123-2.693-1.424-3.995-4.118-4.118-1.225-.056-1.586-.068-4.73-.068zm0 3.888c-2.402 0-4.35 1.948-4.35 4.35s1.948 4.35 4.35 4.35 4.35-1.948 4.35-4.35-1.948-4.35-4.35-4.35zm0 7.167c-1.553 0-2.817-1.264-2.817-2.817s1.264-2.817 2.817-2.817 2.817 1.264 2.817 2.817-1.264 2.817-2.817 2.817zm4.965-7.332c-.608 0-1.1.492-1.1 1.1s.492 1.1 1.1 1.1 1.1-.492 1.1-1.1-.492-1.1-1.1-1.1z"></path></svg></a>
         <a href="https://www.twitter.com/surfacetensi_n" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg></a>
         <a href="https://www.tiktok.com/@surfacetension.co" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg></a>
         <a href="https://www.facebook.com/profile.php?id=61577915426183" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
     </div>
 
-    <div id="footer-elements">
+    <div id="footer-elements" class="content-hidden">
         <a id="contact-link" href="mailto:help.surfacetension@gmail.com"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>Contact Us</a>
         <div id="rights-text">All Rights Reserved</div>
     </div>
 
+    <!-- Optimization: Load scripts last and defer them -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js" defer></script>
+
     <script>
-    // --- CINEMATIC ATMOSPHERE VFX ENGINE ---
-    const CinematicEngine = {
-        scenes: {},
-        renderers: [],
-        lastPaletteChange: 0,
-        paletteChangeInterval: 20000, 
+    // --- Optimization: Run script after HTML is parsed, not after all resources are loaded ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CINEMATIC ATMOSPHERE VFX ENGINE ---
+        const CinematicEngine = {
+            scenes: {},
+            renderers: [],
+            lastPaletteChange: 0,
+            paletteChangeInterval: 20000, 
 
-        // The powerful, randomized animation engine from our projection file.
-        InfiniteVariationSystem: class {
-            constructor() {
-                this.ripplePhases = []; this.noiseSeeds = []; this.rotationOffsets = []; this.intensityWaves = [];
-                for(let i = 0; i < 5; i++) {
-                    this.ripplePhases.push({ speed: 0.1 + Math.random() * 0.2, amplitude: 0.8 + Math.random() * 0.4, frequency: 2.0 + Math.random() * 1.5, offset: Math.random() * Math.PI * 2, cycle: 25000 + Math.random() * 15000 });
-                    this.noiseSeeds.push({ x: Math.random() * 1000, y: Math.random() * 1000, z: Math.random() * 1000, evolution: 0.03 + Math.random() * 0.04, cycle: 30000 + Math.random() * 20000 });
-                    this.rotationOffsets.push({ speed: 0.02 + Math.random() * 0.01, direction: Math.random() > 0.5 ? 1 : -1, wobble: 0.01 + Math.random() * 0.02, cycle: 40000 + Math.random() * 20000 });
-                    this.intensityWaves.push({ frequency: 0.2 + Math.random() * 0.3, amplitude: 0.4 + Math.random() * 0.4, offset: Math.random() * Math.PI * 2, cycle: 35000 + Math.random() * 15000 });
-                }
-                this.lastRegenerationTime = 0; this.regenerationInterval = 90000;
-            }
-            update(time) {
-                if(time - this.lastRegenerationTime > this.regenerationInterval) { this.evolveParameters(); this.lastRegenerationTime = time; }
-                return { ripple: this.calculateRippleVariations(time), noise: this.calculateNoiseVariations(time), rotation: this.calculateRotationVariations(time), intensity: this.calculateIntensityVariations(time), transition: this.calculateTransitionState(time) };
-            }
-            calculateRippleVariations(time) {
-                let combinedSpeed = 0, combinedAmplitude = 0, combinedFrequency = 0;
-                this.ripplePhases.forEach((phase, i) => { const cycle = Math.sin((time / phase.cycle) * Math.PI * 2 + phase.offset), weight = (Math.sin(time * 0.00005 * (i + 1)) + 1) * 0.5; combinedSpeed += phase.speed * cycle * weight; combinedAmplitude += phase.amplitude * cycle * weight; combinedFrequency += phase.frequency * cycle * weight; });
-                return { speed: 0.2 + combinedSpeed * 0.1, amplitude: 0.5 + combinedAmplitude * 0.1, frequency: 1.5 + combinedFrequency * 0.3 };
-            }
-            calculateNoiseVariations(time) {
-                const activeNoise = this.noiseSeeds[Math.floor(time / 15000) % this.noiseSeeds.length], nextNoise = this.noiseSeeds[(Math.floor(time / 15000) + 1) % this.noiseSeeds.length], blend = (time % 15000) / 15000;
-                return { seedX: activeNoise.x + (nextNoise.x - activeNoise.x) * blend, seedY: activeNoise.y + (nextNoise.y - activeNoise.y) * blend, seedZ: activeNoise.z + (nextNoise.z - activeNoise.z) * blend, evolution: activeNoise.evolution + (nextNoise.evolution - activeNoise.evolution) * blend };
-            }
-            calculateRotationVariations(time) {
-                let combinedSpeed = 0, combinedWobble = 0;
-                this.rotationOffsets.forEach((rot, i) => { const cycle = Math.sin((time / rot.cycle) * Math.PI * 2), weight = (Math.sin(time * 0.00004 * (i + 1)) + 1) * 0.5; combinedSpeed += rot.speed * rot.direction * cycle * weight; combinedWobble += rot.wobble * cycle * weight; });
-                return { speed: 0.05 + combinedSpeed * 0.05, wobble: combinedWobble * 0.5 };
-            }
-            calculateIntensityVariations(time) {
-                let combinedIntensity = 1.0;
-                this.intensityWaves.forEach((wave, i) => { const cycle = Math.sin(time * wave.frequency * 0.001 + wave.offset); combinedIntensity += cycle * wave.amplitude * 0.2; });
-                return Math.max(0.5, Math.min(1.5, combinedIntensity));
-            }
-            calculateTransitionState(time) {
-                const primaryWave = Math.sin(time * 0.00002) * 0.5 + 0.5, secondaryWave = Math.sin(time * 0.00005 + Math.PI) * 0.3, tertiaryWave = Math.sin(time * 0.00008) * 0.2;
-                return Math.max(0.1, Math.min(0.9, primaryWave + secondaryWave + tertiaryWave));
-            }
-            evolveParameters() {
-                this.ripplePhases.forEach(phase => {
-                    phase.speed += (Math.random() - 0.5) * 0.02; 
-                    phase.speed = Math.max(0.1, Math.min(0.4, phase.speed));
-                    phase.amplitude += (Math.random() - 0.5) * 0.1;
-                    phase.amplitude = Math.max(0.6, Math.min(1.4, phase.amplitude));
-                });
-                this.noiseSeeds.forEach(seed => {
-                    seed.x += (Math.random() - 0.5) * 20;
-                    seed.y += (Math.random() - 0.5) * 20;
-                    seed.z += (Math.random() - 0.5) * 20;
-                });
-            }
-        },
-
-        getSimplexNoiseShader() {
-            return `
-                vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-                vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-                vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
-                vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
-                float snoise(vec3 v) {
-                  const vec2 C = vec2(1.0/6.0, 1.0/3.0); const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-                  vec3 i = floor(v + dot(v, C.yyy)); vec3 x0 = v - i + dot(i, C.xxx);
-                  vec3 g = step(x0.yzx, x0.xyz); vec3 l = 1.0 - g; vec3 i1 = min(g, l.zxy); vec3 i2 = max(g, l.zxy);
-                  vec3 x1 = x0 - i1 + C.xxx; vec3 x2 = x0 - i2 + C.yyy; vec3 x3 = x0 - D.yyy;
-                  i = mod289(i);
-                  vec4 p = permute( permute( permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-                  float n_ = 0.142857142857; vec3 ns = n_ * D.wyz - D.xzx;
-                  vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-                  vec4 x_ = floor(j * ns.z); vec4 y_ = floor(j - 7.0 * x_);
-                  vec4 x = x_ *ns.x + ns.yyyy; vec4 y = y_ *ns.x + ns.yyyy;
-                  vec4 h = 1.0 - abs(x) - abs(y); vec4 b0 = vec4(x.xy, y.xy); vec4 b1 = vec4(x.zw, y.zw);
-                  vec4 s0 = floor(b0)*2.0 + 1.0; vec4 s1 = floor(b1)*2.0 + 1.0; vec4 sh = -step(h, vec4(0.0));
-                  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy; vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
-                  vec3 p0 = vec3(a0.xy,h.x); vec3 p1 = vec3(a0.zw,h.y); vec3 p2 = vec3(a1.xy,h.z); vec3 p3 = vec3(a1.zw,h.w);
-                  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
-                  p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
-                  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
-                  m = m * m; return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3) ) );
-                }
-            `;
-        },
-
-        createScene(id, options) {
-            const container = document.getElementById(id);
-            if (!container) return;
-
-            try {
-                const scene = new THREE.Scene();
-                const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-                camera.position.z = options.cameraZ || 5;
-
-                const renderer = new THREE.WebGLRenderer({
-                    antialias: true,
-                    alpha: true,
-                    powerPreference: "high-performance"
-                });
-                renderer.setClearColor(0x000000, 0); // Transparent background
-                renderer.setSize(container.clientWidth, container.clientHeight);
-                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-                container.appendChild(renderer.domElement);
-                this.renderers.push(renderer);
-                
-                const material = new THREE.ShaderMaterial(options.shader);
-                const mesh = new THREE.Mesh(options.geometry, material);
-                scene.add(mesh);
-
-                const clock = new THREE.Clock();
-                const variationSystem = new this.InfiniteVariationSystem();
-                
-                const animate = () => {
-                    requestAnimationFrame(animate);
-                    const t = clock.getElapsedTime();
-                    const pNow = performance.now();
-                    const variations = variationSystem.update(pNow);
-                    
-                    if (options.update) {
-                        options.update({ t, main: mesh, variations, pNow });
+            InfiniteVariationSystem: class {
+                constructor() {
+                    this.noiseSeeds = []; this.intensityWaves = [];
+                    for(let i = 0; i < 5; i++) {
+                        this.noiseSeeds.push({ x: Math.random() * 1000, y: Math.random() * 1000, z: Math.random() * 1000, evolution: 0.03 + Math.random() * 0.04, cycle: 30000 + Math.random() * 20000 });
+                        this.intensityWaves.push({ frequency: 0.2 + Math.random() * 0.3, amplitude: 0.4 + Math.random() * 0.4, offset: Math.random() * Math.PI * 2, cycle: 35000 + Math.random() * 15000 });
                     }
-                    
-                    renderer.render(scene, camera);
-                };
-                animate();
-
-                this.scenes[id] = { scene, camera, renderer, mesh };
-
-            } catch (e) {
-                console.error(`Error creating VFX scene "${id}":`, e);
-                container.innerHTML = `<p style="padding: 2em; text-align: center;">A WebGL error occurred.</p>`;
-            }
-        },
-        
-        initCinematicAtmosphere() {
-            const geometry = new THREE.PlaneGeometry(20, 12, 1, 1);
-
-            const palettes = [
-                { name: "Brand", colors: [new THREE.Color("#0a0a1a"), new THREE.Color("#B71C1C"), new THREE.Color("#FFD600")] }, // Deep Blue, Deep Red, Gold
-                { name: "Territory", colors: [new THREE.Color("#263238"), new THREE.Color("#4E342E"), new THREE.Color("#FFAB00")] }, // Slate, Deep Brown, Amber
-                { name: "Emerald", colors: [new THREE.Color("#004D40"), new THREE.Color("#10b981"), new THREE.Color("#A7FFEB")] } // Deep Teal, Brand Emerald, Light Cyan
-            ];
-            let currentPaletteIndex = 0;
-
-            const changePalette = (mesh) => {
-                currentPaletteIndex = (currentPaletteIndex + 1) % palettes.length;
-                const newPalette = palettes[currentPaletteIndex];
-                
-                gsap.to(mesh.material.uniforms.uColor1.value, { r: newPalette.colors[0].r, g: newPalette.colors[0].g, b: newPalette.colors[0].b, duration: 15, ease: "sine.inOut" });
-                gsap.to(mesh.material.uniforms.uColor2.value, { r: newPalette.colors[1].r, g: newPalette.colors[1].g, b: newPalette.colors[1].b, duration: 15, ease: "sine.inOut" });
-                gsap.to(mesh.material.uniforms.uColor3.value, { r: newPalette.colors[2].r, g: newPalette.colors[2].g, b: newPalette.colors[2].b, duration: 15, ease: "sine.inOut" });
-                this.lastPaletteChange = performance.now();
-            };
-
-            this.createScene('vfx-canvas-container', {
-                cameraZ: 5,
-                geometry: geometry,
-                shader: {
-                    uniforms: { 
-                        uTime: { value: 0 }, 
-                        uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-                        uIntensity: { value: 1.0 },
-                        uNoiseEvolution: { value: 0.1 },
-                        uColor1: { value: palettes[0].colors[0] },
-                        uColor2: { value: palettes[0].colors[1] },
-                        uColor3: { value: palettes[0].colors[2] },
-                    },
-                    vertexShader: `
-                        varying vec2 vUv;
-                        void main() {
-                            vUv = uv;
-                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                        }`,
-                    fragmentShader: `
-                        precision highp float; 
-                        ${this.getSimplexNoiseShader()}
-
-                        varying vec2 vUv;
-                        
-                        uniform float uTime;
-                        uniform vec2 uResolution;
-                        uniform float uIntensity;
-                        uniform float uNoiseEvolution;
-                        uniform vec3 uColor1;
-                        uniform vec3 uColor2;
-                        uniform vec3 uColor3;
-
-                        // Function for layered, organic noise (Fractal Brownian Motion)
-                        float fbm(vec3 p) {
-                            float f = 0.0;
-                            mat3 m = mat3(0.00, 0.80, 0.60, -0.80, 0.36, -0.48, -0.60, -0.48, 0.64);
-                            f  = 0.5000 * snoise(p); p = m * p * 2.02;
-                            f += 0.2500 * snoise(p); p = m * p * 2.03;
-                            f += 0.1250 * snoise(p); p = m * p * 2.01;
-                            f += 0.0625 * snoise(p);
-                            return f / 0.9375;
-                        }
-
-                        void main() {
-                            vec2 uv = vUv;
-                            float time = uTime * uNoiseEvolution; 
-                            
-                            // 1. THE FLOW FIELD: A multi-layered current for complex motion
-                            vec2 flow = vec2(
-                                fbm(vec3(uv * 0.5, time * 0.5)),
-                                fbm(vec3(uv * 0.5, time * 0.5 + 10.0))
-                            );
-                            
-                            // 2. DISTORTION: Use the flow field to warp the texture coordinates
-                            // This creates the primary fluid motion
-                            vec2 distortedUv = uv + flow * 0.15;
-
-                            // 3. VOLUMETRIC LAYERING (3D EFFECT): Sample noise at different "depths" (z-values)
-                            // and speeds to create parallax and a sense of volume.
-                            float pattern1 = fbm(vec3(distortedUv * 2.0, time)); // Mid-ground layer
-                            float pattern2 = fbm(vec3(distortedUv * 4.0, time * 0.7)); // Faster, detailed foreground
-                            float pattern3 = fbm(vec3(distortedUv * 1.0, time * 0.3)); // Slow, deep background
-
-                            // Sharpen the patterns to create wispy, filament-like details
-                            float sharpPattern = smoothstep(0.45, 0.55, pattern2);
-
-                            // 4. DYNAMIC COLOR MIXING: Blend the cinematic colors based on the flowing, multi-layered patterns
-                            vec3 color = mix(uColor1, uColor2, smoothstep(-0.2, 0.2, pattern3)); // Base color from deep background
-                            color = mix(color, uColor3, sharpPattern); // Add highlights with the fast foreground
-
-                            // 5. ATMOSPHERE: Add a soft vignette and subtle grain for an analogue feel
-                            float vignette = 1.0 - length((uv - 0.5) * 1.1);
-                            vignette = smoothstep(0.0, 0.8, vignette);
-                            
-                            float grain = (snoise(vec3(uv * 800.0, uTime * 10.0)) * 0.5 + 0.5) * 0.05;
-
-                            // Final composition, modulated by the global intensity
-                            color = color * vignette * uIntensity + grain;
-                            
-                            gl_FragColor = vec4(color, 1.0);
-                        }`
-                },
-                update: ({ t, main, variations, pNow }) => {
-                    // Update shader uniforms with values from the InfiniteVariationSystem
-                    main.material.uniforms.uTime.value = t;
-                    main.material.uniforms.uIntensity.value = variations.intensity;
-                    main.material.uniforms.uNoiseEvolution.value = variations.noise.evolution;
-
-                    // Auto-cycle through color palettes
-                    if (pNow - this.lastPaletteChange > this.paletteChangeInterval) {
-                       changePalette(main);
-                    }
+                    this.lastRegenerationTime = 0; this.regenerationInterval = 90000;
                 }
-            });
-        },
-        
-        handleResize() {
-            this.renderers.forEach((renderer) => {
-                const container = renderer.domElement.parentElement;
-                if (container && container.clientWidth > 0) {
-                    const sceneData = Object.values(this.scenes)[0];
-                    if (sceneData && sceneData.camera) {
-                        sceneData.camera.aspect = container.clientWidth / container.clientHeight;
-                        sceneData.camera.updateProjectionMatrix();
-                        sceneData.mesh.material.uniforms.uResolution.value.set(container.clientWidth, container.clientHeight);
+                update(time) {
+                    if(time - this.lastRegenerationTime > this.regenerationInterval) { this.evolveParameters(); this.lastRegenerationTime = time; }
+                    // --- Optimization: Only calculate what's actually used by the shader ---
+                    return { 
+                        noise: this.calculateNoiseVariations(time), 
+                        intensity: this.calculateIntensityVariations(time) 
+                    };
+                }
+                calculateNoiseVariations(time) {
+                    const activeNoise = this.noiseSeeds[Math.floor(time / 15000) % this.noiseSeeds.length], nextNoise = this.noiseSeeds[(Math.floor(time / 15000) + 1) % this.noiseSeeds.length], blend = (time % 15000) / 15000;
+                    return { evolution: activeNoise.evolution + (nextNoise.evolution - activeNoise.evolution) * blend };
+                }
+                calculateIntensityVariations(time) {
+                    let combinedIntensity = 1.0;
+                    this.intensityWaves.forEach((wave, i) => { const cycle = Math.sin(time * wave.frequency * 0.001 + wave.offset); combinedIntensity += cycle * wave.amplitude * 0.2; });
+                    return Math.max(0.5, Math.min(1.5, combinedIntensity));
+                }
+                evolveParameters() {
+                    this.noiseSeeds.forEach(seed => {
+                        seed.x += (Math.random() - 0.5) * 20;
+                        seed.y += (Math.random() - 0.5) * 20;
+                        seed.z += (Math.random() - 0.5) * 20;
+                    });
+                }
+            },
+
+            getSimplexNoiseShader() {
+                return `
+                    vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+                    vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+                    vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+                    vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+                    float snoise(vec3 v) {
+                      const vec2 C = vec2(1.0/6.0, 1.0/3.0); const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+                      vec3 i = floor(v + dot(v, C.yyy)); vec3 x0 = v - i + dot(i, C.xxx);
+                      vec3 g = step(x0.yzx, x0.xyz); vec3 l = 1.0 - g; vec3 i1 = min(g, l.zxy); vec3 i2 = max(g, l.zxy);
+                      vec3 x1 = x0 - i1 + C.xxx; vec3 x2 = x0 - i2 + C.yyy; vec3 x3 = x0 - D.yyy;
+                      i = mod289(i);
+                      vec4 p = permute( permute( permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+                      float n_ = 0.142857142857; vec3 ns = n_ * D.wyz - D.xzx;
+                      vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+                      vec4 x_ = floor(j * ns.z); vec4 y_ = floor(j - 7.0 * x_);
+                      vec4 x = x_ *ns.x + ns.yyyy; vec4 y = y_ *ns.x + ns.yyyy;
+                      vec4 h = 1.0 - abs(x) - abs(y); vec4 b0 = vec4(x.xy, y.xy); vec4 b1 = vec4(x.zw, y.zw);
+                      vec4 s0 = floor(b0)*2.0 + 1.0; vec4 s1 = floor(b1)*2.0 + 1.0; vec4 sh = -step(h, vec4(0.0));
+                      vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy; vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+                      vec3 p0 = vec3(a0.xy,h.x); vec3 p1 = vec3(a0.zw,h.y); vec3 p2 = vec3(a1.xy,h.z); vec3 p3 = vec3(a1.zw,h.w);
+                      vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+                      p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+                      vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+                      m = m * m; return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3) ) );
                     }
+                `;
+            },
+
+            createScene(id, options) {
+                const container = document.getElementById(id);
+                if (!container) return;
+
+                try {
+                    const scene = new THREE.Scene();
+                    const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+                    camera.position.z = options.cameraZ || 5;
+
+                    const renderer = new THREE.WebGLRenderer({
+                        antialias: true,
+                        alpha: true,
+                        powerPreference: "high-performance"
+                    });
+                    renderer.setClearColor(0x000000, 0); 
                     renderer.setSize(container.clientWidth, container.clientHeight);
-                }
-            });
-        }
-    };
+                    // --- Optimization: Cap pixel ratio to prevent over-rendering on high-DPI displays ---
+                    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+                    container.appendChild(renderer.domElement);
+                    this.renderers.push(renderer);
+                    
+                    const material = new THREE.ShaderMaterial(options.shader);
+                    const mesh = new THREE.Mesh(options.geometry, material);
+                    scene.add(mesh);
 
-    window.addEventListener('load', () => {
-        if (window.WebGLRenderingContext) {
+                    const clock = new THREE.Clock();
+                    const variationSystem = new this.InfiniteVariationSystem();
+                    
+                    const animate = () => {
+                        requestAnimationFrame(animate);
+                        const t = clock.getElapsedTime();
+                        const pNow = performance.now();
+                        const variations = variationSystem.update(pNow);
+                        
+                        if (options.update) {
+                            options.update({ t, main: mesh, variations, pNow });
+                        }
+                        
+                        renderer.render(scene, camera);
+                    };
+                    animate();
+
+                    this.scenes[id] = { scene, camera, renderer, mesh };
+
+                } catch (e) {
+                    console.error(`Error creating VFX scene "${id}":`, e);
+                    throw e; // Propagate error to main handler
+                }
+            },
+            
+            initCinematicAtmosphere() {
+                const geometry = new THREE.PlaneGeometry(20, 12, 1, 1);
+
+                const palettes = [
+                    { name: "Brand", colors: [new THREE.Color("#0a0a1a"), new THREE.Color("#B71C1C"), new THREE.Color("#FFD600")] },
+                    { name: "Territory", colors: [new THREE.Color("#263238"), new THREE.Color("#4E342E"), new THREE.Color("#FFAB00")] },
+                    { name: "Emerald", colors: [new THREE.Color("#004D40"), new THREE.Color("#10b981"), new THREE.Color("#A7FFEB")] }
+                ];
+                let currentPaletteIndex = 0;
+
+                const changePalette = (mesh) => {
+                    currentPaletteIndex = (currentPaletteIndex + 1) % palettes.length;
+                    const newPalette = palettes[currentPaletteIndex];
+                    
+                    gsap.to(mesh.material.uniforms.uColor1.value, { r: newPalette.colors[0].r, g: newPalette.colors[0].g, b: newPalette.colors[0].b, duration: 15, ease: "sine.inOut" });
+                    gsap.to(mesh.material.uniforms.uColor2.value, { r: newPalette.colors[1].r, g: newPalette.colors[1].g, b: newPalette.colors[1].b, duration: 15, ease: "sine.inOut" });
+                    gsap.to(mesh.material.uniforms.uColor3.value, { r: newPalette.colors[2].r, g: newPalette.colors[2].g, b: newPalette.colors[2].b, duration: 15, ease: "sine.inOut" });
+                    this.lastPaletteChange = performance.now();
+                };
+
+                this.createScene('vfx-canvas-container', {
+                    cameraZ: 5,
+                    geometry: geometry,
+                    shader: {
+                        uniforms: { 
+                            uTime: { value: 0 }, 
+                            uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                            uIntensity: { value: 1.0 },
+                            uNoiseEvolution: { value: 0.1 },
+                            uColor1: { value: palettes[0].colors[0] },
+                            uColor2: { value: palettes[0].colors[1] },
+                            uColor3: { value: palettes[0].colors[2] },
+                        },
+                        vertexShader: `
+                            varying vec2 vUv;
+                            void main() {
+                                vUv = uv;
+                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            }`,
+                        fragmentShader: `
+                            precision highp float; 
+                            ${this.getSimplexNoiseShader()}
+
+                            varying vec2 vUv;
+                            uniform float uTime;
+                            uniform float uIntensity;
+                            uniform float uNoiseEvolution;
+                            uniform vec3 uColor1;
+                            uniform vec3 uColor2;
+                            uniform vec3 uColor3;
+
+                            // --- Optimization: Reduced FBM complexity from 4 octaves to 3 ---
+                            float fbm(vec3 p) {
+                                float f = 0.0;
+                                mat3 m = mat3(0.00, 0.80, 0.60, -0.80, 0.36, -0.48, -0.60, -0.48, 0.64);
+                                f += 0.5000 * snoise(p); p = m * p * 2.02;
+                                f += 0.2500 * snoise(p); p = m * p * 2.03;
+                                f += 0.1250 * snoise(p);
+                                return f / 0.875;
+                            }
+
+                            void main() {
+                                vec2 uv = vUv;
+                                float time = uTime * uNoiseEvolution * 0.5; // Slow down time slightly
+                                
+                                // --- Optimization: Simplified noise calculation ---
+                                // Removed the expensive flow field distortion. We animate the noise coordinates directly.
+                                float pattern1 = fbm(vec3(uv * 2.0, time));
+                                float pattern2 = fbm(vec3(uv * 5.0, time * 1.5));
+
+                                // Sharpen the patterns to create wispy, filament-like details
+                                float sharpPattern = smoothstep(0.4, 0.6, pattern2);
+
+                                // Dynamic color mixing
+                                vec3 color = mix(uColor1, uColor2, smoothstep(-0.2, 0.2, pattern1));
+                                color = mix(color, uColor3, sharpPattern);
+
+                                // Atmosphere
+                                float vignette = 1.0 - length((uv - 0.5) * 1.1);
+                                vignette = smoothstep(0.0, 0.8, vignette);
+                                
+                                // --- Optimization: Reduced grain frequency for better performance ---
+                                float grain = (snoise(vec3(uv * 400.0, uTime * 5.0)) * 0.5 + 0.5) * 0.04;
+
+                                // Final composition
+                                color = color * vignette * uIntensity + grain;
+                                
+                                gl_FragColor = vec4(color, 1.0);
+                            }`
+                    },
+                    update: ({ t, main, variations, pNow }) => {
+                        main.material.uniforms.uTime.value = t;
+                        main.material.uniforms.uIntensity.value = variations.intensity;
+                        main.material.uniforms.uNoiseEvolution.value = variations.noise.evolution;
+
+                        if (pNow - this.lastPaletteChange > this.paletteChangeInterval) {
+                           changePalette(main);
+                        }
+                    }
+                });
+            },
+            
+            handleResize() {
+                this.renderers.forEach((renderer) => {
+                    const container = renderer.domElement.parentElement;
+                    if (container && container.clientWidth > 0) {
+                        const sceneData = Object.values(this.scenes)[0];
+                        if (sceneData && sceneData.camera) {
+                            sceneData.camera.aspect = container.clientWidth / container.clientHeight;
+                            sceneData.camera.updateProjectionMatrix();
+                            if (sceneData.mesh.material.uniforms.uResolution) {
+                               sceneData.mesh.material.uniforms.uResolution.value.set(container.clientWidth, container.clientHeight);
+                            }
+                        }
+                        renderer.setSize(container.clientWidth, container.clientHeight);
+                    }
+                });
+            }
+        };
+
+        // --- ROBUST INITIALIZATION ---
+        try {
+            if (!window.THREE) {
+                throw new Error("Three.js library failed to load.");
+            }
+            console.log("WebGL is supported. Initializing Cinematic Engine...");
             CinematicEngine.initCinematicAtmosphere();
             window.addEventListener('resize', () => CinematicEngine.handleResize());
-        } else {
-            document.getElementById('vfx-canvas-container').innerHTML = `<p style="padding: 2em; text-align: center;">Your browser does not support WebGL, which is required for this experience.</p>`;
+            console.log("Cinematic Engine initialized successfully.");
+
+            // --- Optimization: Fade in content now that scripts are running ---
+            document.querySelectorAll('.content-hidden').forEach(el => {
+                el.classList.add('content-visible');
+                el.classList.remove('content-hidden');
+            });
+
+        } catch (error) {
+            console.error("A fatal error occurred during page initialization:", error);
+            const errorContainer = document.getElementById('vfx-canvas-container') || document.body;
+            errorContainer.innerHTML = `
+                <div style="padding: 2em; text-align: center; color: white; font-family: monospace; z-index: 1000; position: relative;">
+                    <h2 style="color: #ff6b6b;">An Error Occurred</h2>
+                    <p style="margin-top: 1em;">The background animation could not be started. Please check the browser console (F12) for more details.</p>
+                    <pre style="text-align: left; display: inline-block; margin-top: 1.5em; padding: 1em; background: rgba(0,0,0,0.3); border: 1px solid #555; border-radius: 5px; max-width: 90%; overflow-wrap: break-word; white-space: pre-wrap;">${error.stack || error.message}</pre>
+                </div>`;
+            const textContainer = document.getElementById('text-container');
+            if(textContainer) textContainer.style.display = 'none';
         }
     });
     </script>
