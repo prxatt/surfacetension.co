@@ -5,239 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Surface Tension</title>
     
-    <!-- Vercel Analytics & Speed Insights are preserved -->
-    <script> window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); }; </script>
-    <script src="/_vercel/insights/script.js" defer></script>
-    <script> window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); }; </script>
-    <script src="/_vercel/speed-insights/script.js" defer></script>
+    <!-- FAVICON: Custom SVG favicon for the brand -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M20 25 C20 15, 30 15, 40 25 L60 75 C70 85, 80 85, 80 75' stroke='%23FFFFFF' stroke-width='10' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M45 50 L75 50' stroke='%23FFFFFF' stroke-width='10' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+
+    <!-- Core libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
     
-    <!-- Font Loading Strategy for Performance -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Font for the brand name -->
     <link rel="stylesheet" href="https://use.typekit.net/jhs3mli.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
 
     <style>
-        /* --- CRITICAL CSS: Inlined for fastest first paint --- */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #000000;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            overscroll-behavior: none; 
-        }
-        
-        /* Initial state for intro animation */
-        .initial-hidden {
-            opacity: 0;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        .canvas-container {
+        html, body {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background-color: #000000; /* Pure black for maximum contrast */
+            color: white;
+            font-family: 'Inter', sans-serif;
+        }
+
+        #vfx-canvas-container {
             position: fixed;
             top: 0;
             left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 1;
-        }
-        #background-canvas-container {
-            z-index: 1;
-        }
-        .content-overlay {
-            position: fixed;
-            z-index: 3; /* Above all canvases */
-            color: white;
-            text-align: center;
             width: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
             height: 100%;
-            padding: 0 5vw;
-            pointer-events: auto;
-        }
-
-        #animated-text-container {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 90%;
-            max-width: 1200px; /* Increased max-width for cinematic spacing */
-            padding-bottom: 120px;
-        }
-        #event-date-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center; 
-            width: 100%; 
-            margin-bottom: 1rem; 
-        }
-        .event-date-text {
-            font-family: "ivypresto-display", serif;
-            font-size: clamp(1.2rem, 2.2vw, 1.6rem); /* Unified font size */
-            text-transform: uppercase;
-            flex-basis: 33.33%; /* Assign equal width to each part */
-        }
-        .event-date-text a {
-            color: inherit;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-        .event-date-text a:hover {
-            color: #ffffff;
-            text-shadow: 0 0 25px rgba(0, 255, 255, 0.8);
-        }
-        #event-date-left { text-align: left; }
-        #event-time-center { text-align: center; }
-        #event-time-right { text-align: right; }
-        
-        .date-highlight-teal {
-            color: #00ffff; 
-            text-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
-        }
-        .date-highlight-purple {
-            color: #a855f7;
-            text-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
-        }
-        .date-highlight-purple a:hover {
-            color: #c084fc;
-            text-shadow: 0 0 20px rgba(168, 85, 247, 0.8);
-        }
-
-        #animated-text {
-            font-family: "ivypresto-display", serif;
-            font-weight: 400;
-            font-style: normal;
-            font-size: clamp(3rem, 9vw, 7rem);
-            line-height: 1.2;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            color: white;
-            text-shadow: 0 0 15px rgba(255, 255, 255, 0.2), 0 0 30px rgba(255, 255, 255, 0.1);
-            width: 100%;
-            word-break: keep-all;
-            text-align: center;
-        }
-        #subtext {
-            font-family: 'Inter', sans-serif;
-            font-weight: 500;
-            font-size: clamp(1.1rem, 2vw, 1.5rem);
-            text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.7);
-            margin-top: 0.75rem; 
-        }
-        .brand-green-highlight {
-            color: #10b981;
+            z-index: 1;
         }
         
-        #flicker-text {
-            animation: flicker 2s infinite alternate;
-        }
-
-        @keyframes flicker {
-            0%, 18%, 22%, 25%, 53%, 57%, 100% {
-                opacity: 1;
-                text-shadow: 0 0 5px #10b981, 0 0 10px #10b981, 0 0 15px #10b981;
-            }
-            20%, 24%, 55% {
-                opacity: 0.4;
-                text-shadow: none;
-            }
-        }
-        
-        .subheading-rave {
-            color: #a855f7;
-        }
-        
-        #ticket-button {
-            margin-top: 3rem;
-            position: relative;
-            width: 280px;
-            height: 85px;
-            cursor: pointer;
-            border-radius: 12px;
-            border: 2px solid rgba(0, 255, 255, 0.6);
-            background: linear-gradient(135deg, rgba(0, 255, 255, 0.05), rgba(0, 255, 255, 0.1));
-            -webkit-backdrop-filter: blur(10px);
-            backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Inter', sans-serif;
-            font-weight: 700;
-            font-size: 1.3rem;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            color: #00ffff;
-            text-decoration: none;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden;
-            box-shadow: 
-                0 0 30px rgba(0, 255, 255, 0.2), 
-                inset 0 0 20px rgba(0, 255, 255, 0.05);
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
-        }
-        #ticket-button::before {
-            content: '';
+        #text-container {
             position: absolute;
             inset: 0;
-            background: linear-gradient(45deg, transparent, rgba(0, 255, 255, 0.1), transparent);
-            opacity: 0.3;
-            transition: opacity 0.4s ease;
-        }
-        #ticket-button:hover {
-            border-color: rgba(0, 255, 255, 1);
-            background: linear-gradient(135deg, rgba(0, 255, 255, 0.15), rgba(0, 255, 255, 0.25));
-            color: #ffffff;
-            box-shadow: 
-                0 0 60px rgba(0, 255, 255, 0.6), 
-                inset 0 0 40px rgba(0, 255, 255, 0.15),
-                0 8px 32px rgba(0, 255, 255, 0.3);
-            text-shadow: 0 0 20px rgba(0, 255, 255, 1);
-            transform: translateY(-3px) scale(1.03);
-        }
-        #ticket-button:hover::before {
-            opacity: 0.8;
-        }
-
-        #sextant-cube-container {
-            margin-top: 2.5rem;
             display: flex;
-            align-items: center;
             justify-content: center;
-            gap: 0.75rem;
-            font-family: 'Inter', sans-serif;
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }
-        
-        #sextant-cube-canvas {
-            width: 40px;
-            height: 40px;
-        }
-        
-        #sextant-link {
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-        
-        #sextant-link:hover {
-            color: #fff;
-            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+            align-items: center;
+            z-index: 3;
+            pointer-events: none; /* Allows mouse events to pass through to the canvas */
         }
 
+        h1 {
+            font-family: "ivypresto-display", serif;
+            font-weight: 300; /* Lighter weight for elegance */
+            font-style: normal;
+            font-size: clamp(3rem, 12vw, 10rem);
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+            letter-spacing: 0.05em;
+            text-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
+        }
+
+        /* --- UI Elements from Reference --- */
         #social-links-container {
             position: fixed;
             bottom: 2rem;
@@ -258,6 +83,7 @@
             justify-content: center;
             position: relative;
             padding: 8px;
+            pointer-events: auto;
         }
         #social-links-container a::before {
             content: '';
@@ -305,7 +131,7 @@
             font-family: 'Inter', sans-serif;
             font-size: 0.7rem;
             color: rgba(255, 255, 255, 0.4);
-            width: 100%;
+            pointer-events: none;
         }
         
         #contact-link {
@@ -317,6 +143,7 @@
             transition: all 0.3s ease;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            pointer-events: auto;
         }
         #contact-link:hover {
             color: #10b981;
@@ -324,449 +151,292 @@
         }
         #contact-link svg { width: 14px; height: 14px; }
         #rights-text { text-transform: uppercase; letter-spacing: 0.05em; }
-        
-        /* --- Responsive Adjustments --- */
+
         @media (max-width: 768px) {
-            #animated-text { font-size: clamp(2.4rem, 10vw, 5rem); letter-spacing: 0.05em; line-height: 1.1; padding: 0 1rem; }
-            #subtext { font-size: clamp(0.95rem, 3vw, 1.2rem); }
-            #event-date-container { flex-direction: column; gap: 0.5rem; align-items: center; text-align: center; }
-            .event-date-text { font-size: clamp(1.2rem, 4vw, 1.6rem); text-align: center !important; }
-            #ticket-button { width: 260px; height: 75px; font-size: 1.1rem; }
             #social-links-container { 
                 gap: 2rem; 
                 bottom: 1rem; 
                 padding-bottom: 4.5rem; 
             }
-            #social-links-container svg { width: 18px; height: 18px; }
-            #sextant-cube-container { margin-top: 1.8rem; gap: 0.5rem; }
-            #sextant-cube-canvas { width: 32px; height: 32px; }
-            #footer-elements { 
+             #footer-elements { 
                 flex-direction: column; 
                 gap: 0.5rem; 
                 padding: 0 1rem; 
                 bottom: 0.3rem; 
             }
         }
-        @media (max-height: 500px) {
-            #animated-text-container { padding-bottom: 60px; }
-            #social-links-container { bottom: 0.5rem; }
-        }
-        @media (max-width: 480px) {
-            #animated-text { font-size: clamp(2rem, 11vw, 4rem); margin: 0.3rem 0; padding: 0 0.5rem; }
-            #ticket-button { width: 240px; height: 70px; font-size: 1rem; }
-            .event-date-text { font-size: clamp(1rem, 5vw, 1.4rem); }
-        }
     </style>
-    <!-- Library Loading: Deferred for non-blocking rendering -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js" defer></script>
 </head>
 <body>
-    
-    <div id="background-canvas-container" class="canvas-container initial-hidden">
-        <canvas id="background-canvas"></canvas>
-    </div>
-    
-    <div id="animated-text-container" class="content-overlay initial-hidden">
-        <div id="event-date-container">
-            <span id="event-date-left" class="event-date-text date-highlight-teal"></span>
-            <span id="event-time-center" class="event-date-text date-highlight-purple"></span>
-            <span id="event-time-right" class="event-date-text date-highlight-teal"></span>
-        </div>
-        <h1 id="animated-text"></h1>
-        <p id="subtext"><span id="flicker-text">DIGITAL DRIP</span>: <span class="subheading-rave">A COFFEE SHOP RAVE</span></p>
-        
-        <a id="ticket-button" href="https://www.eventbrite.com/e/surface-tension-digital-drip-an-after-hours-art-rave-tickets-1471279469499?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl" target="_blank" rel="noopener noreferrer" aria-label="Purchase Tickets">
-            TICKETS
-        </a>
-
-        <div id="sextant-cube-container">
-            <canvas id="sextant-cube-canvas"></canvas>
-            <a href="https://www.google.com/maps/place/539+Valencia+St,+San+Francisco,+CA+94110/@37.7625,-122.421,17z" target="_blank" rel="noopener noreferrer" id="sextant-link">Sextant Coffee Roasters</a>
-        </div>
+    <div id="loading-message" style="position:fixed; top: 10px; left: 10px; z-index: 1001; font-family: monospace;">Loading...</div>
+    <div id="vfx-canvas-container"></div>
+    <div id="text-container">
+        <h1>SURFACE TENSION</h1>
     </div>
 
-    <div id="social-links-container" class="initial-hidden">
+    <!-- UI Elements from Reference -->
+    <div id="social-links-container">
         <a href="https://www.instagram.com/surfacetension.co" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.85s-.011 3.584-.069 4.85c-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07s-3.584-.012-4.85-.07c-3.252-.148-4.771-1.691-4.919-4.919-.058-1.265-.07-1.645-.07-4.85s.012-3.584.07-4.85c.148-3.225 1.664-4.771 4.919-4.919C8.416 2.175 8.796 2.163 12 2.163zm0 1.802c-3.143 0-3.505.012-4.73.068-2.693.123-3.995 1.424-4.118 4.118-.056 1.225-.068 1.586-.068 4.73s.012 3.505.068 4.73c.123 2.693 1.424 3.995 4.118 4.118 1.225.056 1.586.068 4.73.068s3.505-.012 4.73-.068c2.693-.123 3.995-1.424 4.118-4.118.056-1.225.068-1.586.068-4.73s-.012-3.505-.068-4.73c-.123-2.693-1.424-3.995-4.118-4.118-1.225-.056-1.586-.068-4.73-.068zm0 3.888c-2.402 0-4.35 1.948-4.35 4.35s1.948 4.35 4.35 4.35 4.35-1.948 4.35-4.35-1.948-4.35-4.35-4.35zm0 7.167c-1.553 0-2.817-1.264-2.817-2.817s1.264-2.817 2.817-2.817 2.817 1.264 2.817 2.817-1.264 2.817-2.817 2.817zm4.965-7.332c-.608 0-1.1.492-1.1 1.1s.492 1.1 1.1 1.1 1.1-.492 1.1-1.1-.492-1.1-1.1-1.1z"></path></svg></a>
         <a href="https://www.twitter.com/surfacetensi_n" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg></a>
         <a href="https://www.tiktok.com/@surfacetension.co" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg></a>
         <a href="https://www.facebook.com/profile.php?id=61577915426183" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
     </div>
 
-    <div id="footer-elements" class="initial-hidden">
+    <div id="footer-elements">
         <a id="contact-link" href="mailto:help.surfacetension@gmail.com"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>Contact Us</a>
         <div id="rights-text">All Rights Reserved</div>
     </div>
 
-    <script type="module">
-    // Use DOMContentLoaded for faster script execution
-    document.addEventListener('DOMContentLoaded', () => {
-        
-        // Robustly check for libraries before initializing the main scene
-        function checkAndInit() {
-            if (window.THREE && window.gsap) {
-                main();
-            } else {
-                // Poll until libraries are loaded
-                setTimeout(checkAndInit, 50);
+    <script>
+    // --- CINEMATIC ATMOSPHERE VFX ENGINE ---
+    const CinematicEngine = {
+        scenes: {},
+        renderers: [],
+        lastPaletteChange: 0,
+        paletteChangeInterval: 20000, 
+
+        // The powerful, randomized animation engine from our projection file.
+        InfiniteVariationSystem: class {
+            constructor() {
+                this.ripplePhases = []; this.noiseSeeds = []; this.rotationOffsets = []; this.intensityWaves = [];
+                for(let i = 0; i < 5; i++) {
+                    this.ripplePhases.push({ speed: 0.1 + Math.random() * 0.2, amplitude: 0.8 + Math.random() * 0.4, frequency: 2.0 + Math.random() * 1.5, offset: Math.random() * Math.PI * 2, cycle: 25000 + Math.random() * 15000 });
+                    this.noiseSeeds.push({ x: Math.random() * 1000, y: Math.random() * 1000, z: Math.random() * 1000, evolution: 0.03 + Math.random() * 0.04, cycle: 30000 + Math.random() * 20000 });
+                    this.rotationOffsets.push({ speed: 0.02 + Math.random() * 0.01, direction: Math.random() > 0.5 ? 1 : -1, wobble: 0.01 + Math.random() * 0.02, cycle: 40000 + Math.random() * 20000 });
+                    this.intensityWaves.push({ frequency: 0.2 + Math.random() * 0.3, amplitude: 0.4 + Math.random() * 0.4, offset: Math.random() * Math.PI * 2, cycle: 35000 + Math.random() * 15000 });
+                }
+                this.lastRegenerationTime = 0; this.regenerationInterval = 90000;
             }
-        }
+            update(time) {
+                if(time - this.lastRegenerationTime > this.regenerationInterval) { this.evolveParameters(); this.lastRegenerationTime = time; }
+                return { ripple: this.calculateRippleVariations(time), noise: this.calculateNoiseVariations(time), rotation: this.calculateRotationVariations(time), intensity: this.calculateIntensityVariations(time), transition: this.calculateTransitionState(time) };
+            }
+            calculateRippleVariations(time) {
+                let combinedSpeed = 0, combinedAmplitude = 0, combinedFrequency = 0;
+                this.ripplePhases.forEach((phase, i) => { const cycle = Math.sin((time / phase.cycle) * Math.PI * 2 + phase.offset), weight = (Math.sin(time * 0.00005 * (i + 1)) + 1) * 0.5; combinedSpeed += phase.speed * cycle * weight; combinedAmplitude += phase.amplitude * cycle * weight; combinedFrequency += phase.frequency * cycle * weight; });
+                return { speed: 0.2 + combinedSpeed * 0.1, amplitude: 0.5 + combinedAmplitude * 0.1, frequency: 1.5 + combinedFrequency * 0.3 };
+            }
+            calculateNoiseVariations(time) {
+                const activeNoise = this.noiseSeeds[Math.floor(time / 15000) % this.noiseSeeds.length], nextNoise = this.noiseSeeds[(Math.floor(time / 15000) + 1) % this.noiseSeeds.length], blend = (time % 15000) / 15000;
+                return { seedX: activeNoise.x + (nextNoise.x - activeNoise.x) * blend, seedY: activeNoise.y + (nextNoise.y - activeNoise.y) * blend, seedZ: activeNoise.z + (nextNoise.z - activeNoise.z) * blend, evolution: activeNoise.evolution + (nextNoise.evolution - activeNoise.evolution) * blend };
+            }
+            calculateRotationVariations(time) {
+                let combinedSpeed = 0, combinedWobble = 0;
+                this.rotationOffsets.forEach((rot, i) => { const cycle = Math.sin((time / rot.cycle) * Math.PI * 2), weight = (Math.sin(time * 0.00004 * (i + 1)) + 1) * 0.5; combinedSpeed += rot.speed * rot.direction * cycle * weight; combinedWobble += rot.wobble * cycle * weight; });
+                return { speed: 0.05 + combinedSpeed * 0.05, wobble: combinedWobble * 0.5 };
+            }
+            calculateIntensityVariations(time) {
+                let combinedIntensity = 1.0;
+                this.intensityWaves.forEach((wave, i) => { const cycle = Math.sin(time * wave.frequency * 0.001 + wave.offset); combinedIntensity += cycle * wave.amplitude * 0.2; });
+                return Math.max(0.5, Math.min(1.5, combinedIntensity));
+            }
+            calculateTransitionState(time) {
+                const primaryWave = Math.sin(time * 0.00002) * 0.5 + 0.5, secondaryWave = Math.sin(time * 0.00005 + Math.PI) * 0.3, tertiaryWave = Math.sin(time * 0.00008) * 0.2;
+                return Math.max(0.1, Math.min(0.9, primaryWave + secondaryWave + tertiaryWave));
+            }
+            evolveParameters() {
+                this.ripplePhases.forEach(phase => {
+                    phase.speed += (Math.random() - 0.5) * 0.02; 
+                    phase.speed = Math.max(0.1, Math.min(0.4, phase.speed));
+                    phase.amplitude += (Math.random() - 0.5) * 0.1;
+                    phase.amplitude = Math.max(0.6, Math.min(1.4, phase.amplitude));
+                });
+                this.noiseSeeds.forEach(seed => {
+                    seed.x += (Math.random() - 0.5) * 20;
+                    seed.y += (Math.random() - 0.5) * 20;
+                    seed.z += (Math.random() - 0.5) * 20;
+                });
+            }
+        },
 
-        function main() {
-            // --- Global State ---
-            const clock = new THREE.Clock();
-            
-            // --- Smart Performance Monitoring & Adaptive Quality ---
-            let frameCount = 0;
-            let lastFPSCheckTime = 0;
-            let performanceLevel = 'high'; // 'high', 'medium', 'low'
-            let adaptiveQuality = 1.0; // 0.5 (low) to 1.0 (high)
-
-            // --- Scene Variables ---
-            let bgScene, bgCamera, bgRenderer, bgComposer, bgRippleVisual;
-            let sextantCubeScene, sextantCubeCamera, sextantCubeRenderer, sextantCube;
-            
-            // --- VERCEL PERFORMANCE: Enhanced Device Capability Detection ---
-            const getPerformanceTier = () => {
-                const ua = navigator.userAgent;
-                const isMobile = /Mobi|Android|iPhone/i.test(ua);
-                const screenArea = window.innerWidth * window.innerHeight * window.devicePixelRatio;
-                const memory = navigator.deviceMemory || 2;
-
-                if (isMobile || screenArea < 1000000 || memory < 4) {
-                    console.log("Performance Tier: Low");
-                    return 'low';
+        getSimplexNoiseShader() {
+            // This function is kept for now, but not used by the simplified shader
+            return `
+                vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+                vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+                vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+                vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+                float snoise(vec3 v) {
+                  const vec2 C = vec2(1.0/6.0, 1.0/3.0); const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+                  vec3 i = floor(v + dot(v, C.yyy)); vec3 x0 = v - i + dot(i, C.xxx);
+                  vec3 g = step(x0.yzx, x0.xyz); vec3 l = 1.0 - g; vec3 i1 = min(g, l.zxy); vec3 i2 = max(g, l.zxy);
+                  vec3 x1 = x0 - i1 + C.xxx; vec3 x2 = x0 - i2 + C.yyy; vec3 x3 = x0 - D.yyy;
+                  i = mod289(i);
+                  vec4 p = permute( permute( permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+                  float n_ = 0.142857142857; vec3 ns = n_ * D.wyz - D.xzx;
+                  vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+                  vec4 x_ = floor(j * ns.z); vec4 y_ = floor(j - 7.0 * x_);
+                  vec4 x = x_ *ns.x + ns.yyyy; vec4 y = y_ *ns.x + ns.yyyy;
+                  vec4 h = 1.0 - abs(x) - abs(y); vec4 b0 = vec4(x.xy, y.xy); vec4 b1 = vec4(x.zw, y.zw);
+                  vec4 s0 = floor(b0)*2.0 + 1.0; vec4 s1 = floor(b1)*2.0 + 1.0; vec4 sh = -step(h, vec4(0.0));
+                  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy; vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+                  vec3 p0 = vec3(a0.xy,h.x); vec3 p1 = vec3(a0.zw,h.y); vec3 p2 = vec3(a1.xy,h.z); vec3 p3 = vec3(a1.zw,h.w);
+                  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+                  p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+                  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+                  m = m * m; return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3) ) );
                 }
-                if (screenArea < 2500000 || memory < 8) {
-                    console.log("Performance Tier: Medium");
-                    return 'medium';
-                }
-                console.log("Performance Tier: High");
-                return 'high';
+            `;
+        },
+
+        createScene(id, options) {
+            const container = document.getElementById(id);
+            if (!container) return;
+
+            // This try-catch is crucial for WebGL/Shader related errors
+            try {
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+                camera.position.z = options.cameraZ || 5;
+
+                const renderer = new THREE.WebGLRenderer({
+                    antialias: true,
+                    alpha: true,
+                    powerPreference: "high-performance"
+                });
+                renderer.setClearColor(0x000000, 0); // Transparent background
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+                container.appendChild(renderer.domElement);
+                this.renderers.push(renderer);
+                
+                const material = new THREE.ShaderMaterial(options.shader);
+                const mesh = new THREE.Mesh(options.geometry, material);
+                scene.add(mesh);
+
+                const clock = new THREE.Clock();
+                const variationSystem = new this.InfiniteVariationSystem();
+                
+                const animate = () => {
+                    requestAnimationFrame(animate);
+                    const t = clock.getElapsedTime();
+                    const pNow = performance.now();
+                    const variations = variationSystem.update(pNow);
+                    
+                    if (options.update) {
+                        options.update({ t, main: mesh, variations, pNow });
+                    }
+                    
+                    renderer.render(scene, camera);
+                };
+                animate();
+
+                this.scenes[id] = { scene, camera, renderer, mesh };
+
+            } catch (e) {
+                console.error(`Error creating VFX scene "${id}":`, e);
+                // Re-throw the error to be caught by the main handler
+                throw e;
+            }
+        },
+        
+        initCinematicAtmosphere() {
+            const geometry = new THREE.PlaneGeometry(20, 12, 1, 1);
+
+            const palettes = [
+                { name: "Brand", colors: [new THREE.Color("#0a0a1a"), new THREE.Color("#B71C1C"), new THREE.Color("#FFD600")] }, // Deep Blue, Deep Red, Gold
+                { name: "Territory", colors: [new THREE.Color("#263238"), new THREE.Color("#4E342E"), new THREE.Color("#FFAB00")] }, // Slate, Deep Brown, Amber
+                { name: "Emerald", colors: [new THREE.Color("#004D40"), new THREE.Color("#10b981"), new THREE.Color("#A7FFEB")] } // Deep Teal, Brand Emerald, Light Cyan
+            ];
+            let currentPaletteIndex = 0;
+
+            const changePalette = (mesh) => {
+                currentPaletteIndex = (currentPaletteIndex + 1) % palettes.length;
+                const newPalette = palettes[currentPaletteIndex];
+                
+                gsap.to(mesh.material.uniforms.uColor1.value, { r: newPalette.colors[0].r, g: newPalette.colors[0].g, b: newPalette.colors[0].b, duration: 15, ease: "sine.inOut" });
+                gsap.to(mesh.material.uniforms.uColor2.value, { r: newPalette.colors[1].r, g: newPalette.colors[1].g, b: newPalette.colors[1].b, duration: 15, ease: "sine.inOut" });
+                gsap.to(mesh.material.uniforms.uColor3.value, { r: newPalette.colors[2].r, g: newPalette.colors[2].g, b: newPalette.colors[2].b, duration: 15, ease: "sine.inOut" });
+                this.lastPaletteChange = performance.now();
             };
 
-            performanceLevel = getPerformanceTier();
-            
-            // Set initial quality based on tier
-            if (performanceLevel === 'low') adaptiveQuality = 0.5;
-            else if (performanceLevel === 'medium') adaptiveQuality = 0.75;
-            else adaptiveQuality = 1.0;
-
-
-            // --- Smart Performance Monitoring System ---
-            function monitorPerformance(now) {
-                frameCount++;
-                if (now - lastFPSCheckTime >= 1000) {
-                    const currentFPS = frameCount;
-                    frameCount = 0;
-                    lastFPSCheckTime = now;
-                    
-                    if (currentFPS < 35 && performanceLevel !== 'low') {
-                        performanceLevel = 'low';
-                        adaptiveQuality = 0.5;
-                        applyAdaptiveSettings();
-                    } else if (currentFPS < 50 && performanceLevel === 'high') {
-                        performanceLevel = 'medium';
-                        adaptiveQuality = 0.75;
-                        applyAdaptiveSettings();
-                    }
-                }
-            }
-
-            function applyAdaptiveSettings() {
-                const newPixelRatio = Math.min(window.devicePixelRatio * adaptiveQuality, 1.5);
-                if (bgRenderer) bgRenderer.setPixelRatio(newPixelRatio);
-            }
-
-            // --- Optimized Particle Count ---
-            function getAdaptiveParticleCount(baseCount) {
-               // Increased density for a richer visual
-               if (performanceLevel === 'low') return Math.floor(baseCount * 0.3);
-               if (performanceLevel === 'medium') return Math.floor(baseCount * 0.6);
-               return baseCount;
-            }
-
-            // --- Debounce Utility ---
-            function debounce(func, wait) {
-                let timeout;
-                return function(...args) {
-                    clearTimeout(timeout);
-                    timeout = setTimeout(() => func.apply(this, args), wait);
-                };
-            }
-
-            /*
-             * ==================================
-             * == SHADER CODE (BACKGROUND)    ==
-             * ==================================
-             */
-            const backgroundVertexShader = `
-                uniform float uTime;
-                uniform float uRippleProgress; // 0 to 1, controlled by GSAP
-                uniform float uRippleMix;      // 0 to 1, controlled by GSAP
-                attribute float aParticleType;
-                varying float vAlpha;
-                varying vec3 vColor;
-
-                void main() {
-                    vec3 greenHaloColor = vec3(0.06, 0.9, 0.6);
-                    vec3 greenCenterColor = vec3(0.8, 1.0, 0.9);
-                    vec3 platinumHaloColor = vec3(0.7, 0.75, 0.85);
-                    vec3 platinumCenterColor = vec3(1.0, 1.0, 1.0);
-
-                    vec3 greenColor = mix(greenCenterColor, greenHaloColor, 0.5);
-                    vec3 platinumColor = mix(platinumCenterColor, platinumHaloColor, 0.5);
-                    vColor = mix(greenColor, platinumColor, aParticleType) * 1.2;
-
-                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                    
-                    float dist = length(mvPosition.xy);
-
-                    // Animation 1: Original subtle ripple
-                    float originalAnimZ = sin(dist * 1.2 - uTime * 0.15) * 1.5 * exp(-dist * 0.1);
-
-                    // Animation 2: One-shot cinematic ripple
-                    float rippleTravel = uRippleProgress * 80.0; // FIX: Increased travel distance to cover viewport
-                    float rippleWidth = 7.0;
-                    float rippleAmplitude = 10.0;
-                    float profile = sin((dist - rippleTravel) / rippleWidth * 3.14159);
-                    profile = max(0.0, profile);
-                    profile = pow(profile, 2.0);
-                    float cinematicAnimZ = profile * rippleAmplitude;
-
-                    // Mix between the two animations
-                    mvPosition.z += mix(originalAnimZ, cinematicAnimZ, uRippleMix);
-
-                    float zFactor = 1.0 - clamp(abs(mvPosition.z / 20.0), 0.0, 1.0);
-                    gl_PointSize = (zFactor * zFactor) * 2.0 + 0.5;
-                    vAlpha = zFactor * 1.2;
-                    gl_Position = projectionMatrix * mvPosition;
-                }
-            `;
-
-            const backgroundFragmentShader = `
-                varying float vAlpha;
-                varying vec3 vColor;
-
-                void main() {
-                    float dist = distance(gl_PointCoord, vec2(0.5));
-                    if (dist > 0.5) discard;
-                    float strength = 1.0 - dist * 2.0;
-                    vec3 finalColor = clamp(vColor, 0.0, 1.5);
-                    gl_FragColor = vec4(finalColor, strength * vAlpha);
-                }
-            `;
-            
-            // --- Scene and Visuals Setup ---
-            async function init() {
-                initBackgroundScene();
-                await initSextantCube();
-                setupEventListeners();
-                applyAdaptiveSettings(); // Apply initial settings
-                animate();
-                setTextContent(); // Set text content
-                playIntroAnimation(); // Play the new cinematic intro
-                startMasterAnimationSequence(); // Start the background ripple animation loop
-            }
-            
-            async function initSextantCube() {
-                const canvas = document.getElementById('sextant-cube-canvas');
-                if (!canvas) return;
-                const size = 40;
-                sextantCubeScene = new THREE.Scene();
-                sextantCubeCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-                sextantCubeCamera.position.z = 3;
-                sextantCubeRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: performanceLevel !== 'low', alpha: true });
-                sextantCubeRenderer.setSize(size, size);
-                sextantCubeRenderer.setPixelRatio(window.devicePixelRatio);
-                const particleCount = performanceLevel === 'low' ? 1000 : 2500;
-                const geometry = new THREE.BufferGeometry();
-                const positions = new Float32Array(particleCount * 3);
-                for (let i = 0; i < particleCount; i++) {
-                    const edge = Math.floor(Math.random() * 12);
-                    let x, y, z;
-                    const t = Math.random();
-                    switch(edge){case 0:x=t*2-1;y=-1;z=-1;break;case 1:x=t*2-1;y=1;z=-1;break;case 2:x=t*2-1;y=-1;z=1;break;case 3:x=t*2-1;y=1;z=1;break;case 4:x=-1;y=t*2-1;z=-1;break;case 5:x=1;y=t*2-1;z=-1;break;case 6:x=-1;y=t*2-1;z=1;break;case 7:x=1;y=t*2-1;z=1;break;case 8:x=-1;y=-1;z=t*2-1;break;case 9:x=1;y=-1;z=t*2-1;break;case 10:x=-1;y=1;z=t*2-1;break;case 11:x=1;y=1;z=t*2-1;break;default:x=0;y=0;z=0;}
-                    positions.set([x,y,z], i*3);
-                }
-                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-                const material = new THREE.PointsMaterial({ size: 1.5, color: 0x10b981, blending: THREE.NormalBlending, transparent: true, opacity: 0.6 });
-                sextantCube = new THREE.Points(geometry, material);
-                sextantCubeScene.add(sextantCube);
-            }
-
-            function initBackgroundScene() {
-                bgScene = new THREE.Scene();
-                bgCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                bgCamera.position.z = 2;
-                bgRenderer = new THREE.WebGLRenderer({ canvas: document.getElementById('background-canvas'), antialias: performanceLevel !== 'low', alpha: true });
-                bgRenderer.setSize(window.innerWidth, window.innerHeight);
-                // Increased particle count for more density
-                const pCount = getAdaptiveParticleCount(80000);
-                const geometry = new THREE.BufferGeometry();
-                const pos = new Float32Array(pCount * 3);
-                const particleTypes = new Float32Array(pCount);
-                for (let i = 0; i < pCount; i++) {
-                    const i3 = i * 3;
-                    const r = Math.random() * 30;
-                    const a = Math.random() * Math.PI * 2;
-                    pos.set([r * Math.cos(a), r * Math.sin(a), (Math.random() - .5) * 12], i3);
-                    particleTypes[i] = Math.random() < 0.2 ? 1.0 : 0.0;
-                }
-                geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-                geometry.setAttribute('aParticleType', new THREE.BufferAttribute(particleTypes, 1));
-                
-                const material = new THREE.ShaderMaterial({ 
-                    vertexShader: backgroundVertexShader, 
-                    fragmentShader: backgroundFragmentShader, 
+            this.createScene('vfx-canvas-container', {
+                cameraZ: 5,
+                geometry: geometry,
+                shader: {
                     uniforms: { 
-                        uTime: { value: 0 },
-                        uRippleProgress: { value: 0 },
-                        uRippleMix: { value: 0 }
-                    }, 
-                    blending: THREE.AdditiveBlending, 
-                    transparent: true, 
-                    depthWrite: false 
-                });
-                bgRippleVisual = new THREE.Points(geometry, material);
-                bgScene.add(bgRippleVisual);
-                bgComposer = new THREE.EffectComposer(bgRenderer);
-                bgComposer.addPass(new THREE.RenderPass(bgScene, bgCamera));
-                if (performanceLevel === 'high') {
-                    const secretBloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.6, 0.2);
-                    bgComposer.addPass(secretBloomPass);
+                        uTime: { value: 0 }, 
+                        uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                        uIntensity: { value: 1.0 },
+                        uNoiseEvolution: { value: 0.1 },
+                        uColor1: { value: palettes[0].colors[0] },
+                        uColor2: { value: palettes[0].colors[1] },
+                        uColor3: { value: palettes[0].colors[2] },
+                    },
+                    vertexShader: `
+                        varying vec2 vUv;
+                        void main() {
+                            vUv = uv;
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                        }`,
+                    fragmentShader: `
+                        precision highp float; 
+                        
+                        varying vec2 vUv;
+                        uniform float uTime;
+                        
+                        // A much simpler shader for debugging purposes.
+                        // This will show a colorful gradient if the WebGL pipeline is working.
+                        void main() {
+                            vec2 uv = vUv;
+                            float time = uTime * 0.1; // Use uTime to see if it's animating
+                            vec3 color = vec3(uv.x, uv.y, abs(sin(time)));
+                            gl_FragColor = vec4(color, 1.0);
+                        }`
+                },
+                update: ({ t, main, variations, pNow }) => {
+                    // Only update the time uniform for the simple shader
+                    main.material.uniforms.uTime.value = t;
                 }
-            }
-
-            function setupEventListeners() {
-                window.addEventListener('resize', debounce(onWindowResize, 200), false);
-            }
-
-            function playIntroAnimation() {
-                // This timeline is choreographed for a fast, high-impact, "Hollywood" style reveal.
-                const tl = gsap.timeline();
-
-                // Group all text elements for a staggered reveal
-                const otherText = [
-                    '#event-date-container', 
-                    '#subtext', 
-                    '#sextant-cube-container', 
-                    '#social-links-container', 
-                    '#footer-elements'
-                ];
-
-                // 1. Background fades in instantly.
-                tl.to('#background-canvas-container', { opacity: 1, duration: 0.5, ease: 'power1.in' }, 0);
-                
-                // 2. "SURFACE TENSION" title appears with a subtle scale for emphasis.
-                tl.fromTo('#animated-text', { opacity: 0, scale: 0.95 }, { opacity: 1, scale: 1, duration: 0.6, ease: 'power2.out' }, 0.1);
-
-                // 3. "TICKETS" button is the next focus point, sliding up into view.
-                tl.fromTo('#ticket-button', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }, 0.3);
-                
-                // 4. All other supporting text fades in together to complete the scene.
-                tl.fromTo(otherText, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power1.out', stagger: 0.05 }, 0.5);
-
-                // Make the main content container visible as its children animate in.
-                gsap.to('#animated-text-container', { opacity: 1, duration: 0.1 }, 0.1);
-            }
-
-            function startMasterAnimationSequence() {
-                const uniforms = bgRippleVisual.material.uniforms;
-                
-                function runRippleCycle() {
-                    uniforms.uRippleProgress.value = 0;
-                    
-                    gsap.timeline({
-                        onComplete: () => {
-                            setTimeout(runRippleCycle, 8000); // 8 second delay between ripples
+            });
+        },
+        
+        handleResize() {
+            this.renderers.forEach((renderer) => {
+                const container = renderer.domElement.parentElement;
+                if (container && container.clientWidth > 0) {
+                    const sceneData = Object.values(this.scenes)[0];
+                    if (sceneData && sceneData.camera) {
+                        sceneData.camera.aspect = container.clientWidth / container.clientHeight;
+                        sceneData.camera.updateProjectionMatrix();
+                        if (sceneData.mesh.material.uniforms.uResolution) {
+                           sceneData.mesh.material.uniforms.uResolution.value.set(container.clientWidth, container.clientHeight);
                         }
-                    })
-                    .to(uniforms.uRippleProgress, {
-                        value: 1,
-                        duration: 20, 
-                        ease: "power1.inOut"
-                    })
-                    .fromTo(uniforms.uRippleMix, { value: 0 }, {
-                        value: 1,
-                        duration: 7, 
-                        ease: "sine.in"
-                    }, 0)
-                    .to(uniforms.uRippleMix, {
-                        value: 0,
-                        duration: 7, 
-                        ease: "sine.out"
-                    }, ">-7");
+                    }
+                    renderer.setSize(container.clientWidth, container.clientHeight);
                 }
-
-                // Start the first cycle after a delay to let the intro finish
-                setTimeout(runRippleCycle, 4000);
-            }
-            
-            function setTextContent() { 
-                const textElement = document.getElementById('animated-text'); 
-                const dateLeftElement = document.getElementById('event-date-left'); 
-                const timeCenterElement = document.getElementById('event-time-center');
-                const timeRightElement = document.getElementById('event-time-right');
-
-                if (!textElement || !dateLeftElement || !timeCenterElement || !timeRightElement) return; 
-                
-                textElement.textContent = "SURFACE TENSION"; 
-                const eventTitle = encodeURIComponent("SURFACE TENSION - DIGITAL DRIP AT SEXTANT"); 
-                const eventLocation = encodeURIComponent("539 Valencia Street, San Francisco, CA"); 
-                const eventDetails = encodeURIComponent("Experience the intersection of digital art and specialty coffee. An immersive art showcase from 5:00 PM to 6:30 PM, transitioning into a vibrant rave space with a live DJ set at 7 PM."); 
-                const calendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${eventTitle}&dates=20250726T170000/20250726T220000&location=${eventLocation}&details=${eventDetails}`; 
-                
-                dateLeftElement.innerHTML = `<a href="${calendarUrl}" target="_blank" rel="noopener noreferrer">JULY 26TH, 2025</a>`; 
-                timeCenterElement.innerHTML = `<a href="${calendarUrl}" target="_blank" rel="noopener noreferrer">DJ SET 7:00PM</a>`;
-                timeRightElement.innerHTML = `<a href="${calendarUrl}" target="_blank" rel="noopener noreferrer">ART SHOW 5:00PM</a>`;
-            }
-            
-            function onWindowResize() { 
-                const width = window.innerWidth, height = window.innerHeight; 
-                bgCamera.aspect = width / height; 
-                bgCamera.updateProjectionMatrix(); 
-                bgRenderer.setSize(width, height); 
-                if(bgComposer) bgComposer.setSize(width, height); 
-                applyAdaptiveSettings(); 
-            }
-
-            let lastRenderTime = 0;
-            function animate(now) {
-                requestAnimationFrame(animate);
-                if(performanceLevel === 'high') {
-                    monitorPerformance(now);
-                }
-                const requiredElapsed = performanceLevel === 'low' ? 30 : 16;
-                if (now - lastRenderTime < requiredElapsed && now > 0) {
-                    return;
-                }
-                lastRenderTime = now;
-                const elapsedTime = clock.getElapsedTime();
-                if (bgRippleVisual) {
-                    bgRippleVisual.material.uniforms.uTime.value = elapsedTime;
-                    if(bgComposer) bgComposer.render(); else bgRenderer.render(bgScene, bgCamera);
-                }
-                if (sextantCube) {
-                    sextantCube.rotation.x += 0.01 * adaptiveQuality;
-                    sextantCube.rotation.y += 0.015 * adaptiveQuality;
-                    sextantCubeRenderer.render(sextantCubeScene, sextantCubeCamera);
-                }
-            }
-            
-            // Initialize the application
-            init();
+            });
         }
+    };
 
-        // Start the process
-        checkAndInit();
+    // --- ROBUST INITIALIZATION ---
+    window.addEventListener('load', () => {
+        const loadingMessage = document.getElementById('loading-message');
+        try {
+            if (!window.WebGLRenderingContext) {
+                throw new Error("Your browser does not support WebGL, which is required for this experience.");
+            }
+            console.log("WebGL is supported. Initializing Cinematic Engine...");
+            CinematicEngine.initCinematicAtmosphere();
+            window.addEventListener('resize', () => CinematicEngine.handleResize());
+            console.log("Cinematic Engine initialized successfully.");
+            if(loadingMessage) loadingMessage.remove();
+
+        } catch (error) {
+            console.error("A fatal error occurred during page initialization:", error);
+            const errorContainer = document.getElementById('vfx-canvas-container') || document.body;
+            // Clear any existing content and show the error
+            errorContainer.innerHTML = `
+                <div style="padding: 2em; text-align: center; color: white; font-family: monospace; z-index: 1000; position: relative;">
+                    <h2 style="color: #ff6b6b;">An Error Occurred</h2>
+                    <p style="margin-top: 1em;">The background animation could not be started. Please check the browser console (F12) for more details.</p>
+                    <pre style="text-align: left; display: inline-block; margin-top: 1.5em; padding: 1em; background: rgba(0,0,0,0.3); border: 1px solid #555; border-radius: 5px; max-width: 90%; overflow-wrap: break-word; white-space: pre-wrap;">${error.stack}</pre>
+                </div>`;
+            if(loadingMessage) loadingMessage.remove();
+            // Hide the main text if an error occurs to make the error message more prominent
+            const textContainer = document.getElementById('text-container');
+            if(textContainer) textContainer.style.display = 'none';
+        }
     });
     </script>
 </body>
