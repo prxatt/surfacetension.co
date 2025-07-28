@@ -16,6 +16,20 @@
     <link rel="stylesheet" href="https://use.typekit.net/jhs3mli.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
 
+    <!-- Analytics -->
+    <script>
+        window.va = window.va || function () { (window.va.q = window.va.q || []).push(arguments); };
+    </script>
+    <script src="/_vercel/insights/script.js" defer></script>
+    <!-- Google Analytics - Replace GA_MEASUREMENT_ID with your own ID -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'GA_MEASUREMENT_ID');
+    </script>
+
     <style>
         * {
             margin: 0;
@@ -202,27 +216,28 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js" defer></script>
 
     <script>
-    // --- Optimization: Run script after HTML is parsed, not after all resources are loaded ---
     document.addEventListener('DOMContentLoaded', () => {
         // --- CINEMATIC ATMOSPHERE VFX ENGINE ---
         const CinematicEngine = {
             scenes: {},
             renderers: [],
             lastPaletteChange: 0,
-            paletteChangeInterval: 20000, 
+            paletteChangeInterval: 15000, // Change colors every 15 seconds
 
+            // Restored the full variation system for more dynamic, non-repeating animations
             InfiniteVariationSystem: class {
                 constructor() {
-                    this.noiseSeeds = []; this.intensityWaves = [];
+                    this.ripplePhases = []; this.noiseSeeds = []; this.rotationOffsets = []; this.intensityWaves = [];
                     for(let i = 0; i < 5; i++) {
+                        this.ripplePhases.push({ speed: 0.1 + Math.random() * 0.2, amplitude: 0.8 + Math.random() * 0.4, frequency: 2.0 + Math.random() * 1.5, offset: Math.random() * Math.PI * 2, cycle: 25000 + Math.random() * 15000 });
                         this.noiseSeeds.push({ x: Math.random() * 1000, y: Math.random() * 1000, z: Math.random() * 1000, evolution: 0.03 + Math.random() * 0.04, cycle: 30000 + Math.random() * 20000 });
+                        this.rotationOffsets.push({ speed: 0.02 + Math.random() * 0.01, direction: Math.random() > 0.5 ? 1 : -1, wobble: 0.01 + Math.random() * 0.02, cycle: 40000 + Math.random() * 20000 });
                         this.intensityWaves.push({ frequency: 0.2 + Math.random() * 0.3, amplitude: 0.4 + Math.random() * 0.4, offset: Math.random() * Math.PI * 2, cycle: 35000 + Math.random() * 15000 });
                     }
                     this.lastRegenerationTime = 0; this.regenerationInterval = 90000;
                 }
                 update(time) {
                     if(time - this.lastRegenerationTime > this.regenerationInterval) { this.evolveParameters(); this.lastRegenerationTime = time; }
-                    // --- Optimization: Only calculate what's actually used by the shader ---
                     return { 
                         noise: this.calculateNoiseVariations(time), 
                         intensity: this.calculateIntensityVariations(time) 
@@ -291,7 +306,6 @@
                     });
                     renderer.setClearColor(0x000000, 0); 
                     renderer.setSize(container.clientWidth, container.clientHeight);
-                    // --- Optimization: Cap pixel ratio to prevent over-rendering on high-DPI displays ---
                     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
                     container.appendChild(renderer.domElement);
                     this.renderers.push(renderer);
@@ -328,20 +342,19 @@
             initCinematicAtmosphere() {
                 const geometry = new THREE.PlaneGeometry(20, 12, 1, 1);
 
-                const palettes = [
-                    { name: "Brand", colors: [new THREE.Color("#0a0a1a"), new THREE.Color("#B71C1C"), new THREE.Color("#FFD600")] },
-                    { name: "Territory", colors: [new THREE.Color("#263238"), new THREE.Color("#4E342E"), new THREE.Color("#FFAB00")] },
-                    { name: "Emerald", colors: [new THREE.Color("#004D40"), new THREE.Color("#10b981"), new THREE.Color("#A7FFEB")] }
-                ];
-                let currentPaletteIndex = 0;
-
-                const changePalette = (mesh) => {
-                    currentPaletteIndex = (currentPaletteIndex + 1) % palettes.length;
-                    const newPalette = palettes[currentPaletteIndex];
+                // This function will generate a new random color palette and start the transition.
+                const transitionToRandomColors = (mesh) => {
+                    // Generate three new vibrant, random colors using HSL
+                    const newColor1 = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
+                    const newColor2 = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
+                    const newColor3 = new THREE.Color().setHSL(Math.random(), 0.8, 0.6);
                     
-                    gsap.to(mesh.material.uniforms.uColor1.value, { r: newPalette.colors[0].r, g: newPalette.colors[0].g, b: newPalette.colors[0].b, duration: 15, ease: "sine.inOut" });
-                    gsap.to(mesh.material.uniforms.uColor2.value, { r: newPalette.colors[1].r, g: newPalette.colors[1].g, b: newPalette.colors[1].b, duration: 15, ease: "sine.inOut" });
-                    gsap.to(mesh.material.uniforms.uColor3.value, { r: newPalette.colors[2].r, g: newPalette.colors[2].g, b: newPalette.colors[2].b, duration: 15, ease: "sine.inOut" });
+                    // Use GSAP to smoothly animate the color uniforms
+                    const duration = 15; // Duration of the color transition
+                    gsap.to(mesh.material.uniforms.uColor1.value, { r: newColor1.r, g: newColor1.g, b: newColor1.b, duration: duration, ease: "sine.inOut" });
+                    gsap.to(mesh.material.uniforms.uColor2.value, { r: newColor2.r, g: newColor2.g, b: newColor2.b, duration: duration, ease: "sine.inOut" });
+                    gsap.to(mesh.material.uniforms.uColor3.value, { r: newColor3.r, g: newColor3.g, b: newColor3.b, duration: duration, ease: "sine.inOut" });
+                    
                     this.lastPaletteChange = performance.now();
                 };
 
@@ -354,9 +367,10 @@
                             uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
                             uIntensity: { value: 1.0 },
                             uNoiseEvolution: { value: 0.1 },
-                            uColor1: { value: palettes[0].colors[0] },
-                            uColor2: { value: palettes[0].colors[1] },
-                            uColor3: { value: palettes[0].colors[2] },
+                            // Start with random colors
+                            uColor1: { value: new THREE.Color().setHSL(Math.random(), 0.7, 0.5) },
+                            uColor2: { value: new THREE.Color().setHSL(Math.random(), 0.7, 0.5) },
+                            uColor3: { value: new THREE.Color().setHSL(Math.random(), 0.8, 0.6) },
                         },
                         vertexShader: `
                             varying vec2 vUv;
@@ -376,38 +390,43 @@
                             uniform vec3 uColor2;
                             uniform vec3 uColor3;
 
-                            // --- Optimization: Reduced FBM complexity from 4 octaves to 3 ---
+                            // Re-introducing a more complex FBM for more visual depth
                             float fbm(vec3 p) {
                                 float f = 0.0;
                                 mat3 m = mat3(0.00, 0.80, 0.60, -0.80, 0.36, -0.48, -0.60, -0.48, 0.64);
                                 f += 0.5000 * snoise(p); p = m * p * 2.02;
                                 f += 0.2500 * snoise(p); p = m * p * 2.03;
-                                f += 0.1250 * snoise(p);
-                                return f / 0.875;
+                                f += 0.1250 * snoise(p); p = m * p * 2.01;
+                                f += 0.0625 * snoise(p);
+                                return f / 0.9375;
                             }
 
                             void main() {
                                 vec2 uv = vUv;
-                                float time = uTime * uNoiseEvolution * 0.5; // Slow down time slightly
+                                float time = uTime * uNoiseEvolution; 
                                 
-                                // --- Optimization: Simplified noise calculation ---
-                                // Removed the expensive flow field distortion. We animate the noise coordinates directly.
-                                float pattern1 = fbm(vec3(uv * 2.0, time));
-                                float pattern2 = fbm(vec3(uv * 5.0, time * 1.5));
+                                // Re-introducing flow field for more 3D depth and fluid motion
+                                vec2 flow = vec2(
+                                    fbm(vec3(uv * 1.5, time * 0.5)),
+                                    fbm(vec3(uv * 1.5 + 5.0, time * 0.5))
+                                );
+                                vec2 distortedUv = uv + flow * 0.1;
 
-                                // Sharpen the patterns to create wispy, filament-like details
-                                float sharpPattern = smoothstep(0.4, 0.6, pattern2);
+                                // Volumetric layering for parallax and depth
+                                float pattern1 = fbm(vec3(distortedUv * 2.0, time * 0.7)); // Mid-ground
+                                float pattern2 = fbm(vec3(distortedUv * 5.0, time));       // Foreground
+                                float pattern3 = fbm(vec3(distortedUv * 1.0, time * 0.4)); // Background
+
+                                float sharpPattern = smoothstep(0.45, 0.55, pattern2);
 
                                 // Dynamic color mixing
-                                vec3 color = mix(uColor1, uColor2, smoothstep(-0.2, 0.2, pattern1));
+                                vec3 color = mix(uColor1, uColor2, smoothstep(-0.2, 0.2, pattern3));
                                 color = mix(color, uColor3, sharpPattern);
 
                                 // Atmosphere
-                                float vignette = 1.0 - length((uv - 0.5) * 1.1);
+                                float vignette = 1.0 - length((uv - 0.5) * 1.0);
                                 vignette = smoothstep(0.0, 0.8, vignette);
-                                
-                                // --- Optimization: Reduced grain frequency for better performance ---
-                                float grain = (snoise(vec3(uv * 400.0, uTime * 5.0)) * 0.5 + 0.5) * 0.04;
+                                float grain = (snoise(vec3(uv * 600.0, uTime * 8.0)) * 0.5 + 0.5) * 0.04;
 
                                 // Final composition
                                 color = color * vignette * uIntensity + grain;
@@ -420,8 +439,9 @@
                         main.material.uniforms.uIntensity.value = variations.intensity;
                         main.material.uniforms.uNoiseEvolution.value = variations.noise.evolution;
 
+                        // Check if it's time to transition to new random colors
                         if (pNow - this.lastPaletteChange > this.paletteChangeInterval) {
-                           changePalette(main);
+                           transitionToRandomColors(main);
                         }
                     }
                 });
