@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Surface Tension</title>
     
     <!-- FAVICON: Custom SVG favicon for the brand -->
@@ -28,8 +28,6 @@
             width: 100vw;
             overflow: hidden;
             background-color: #000000; /* Pure black for maximum contrast */
-            color: white;
-            font-family: 'Inter', sans-serif;
         }
 
         #vfx-canvas-container {
@@ -168,7 +166,6 @@
     </style>
 </head>
 <body>
-    <div id="loading-message" style="position:fixed; top: 10px; left: 10px; z-index: 1001; font-family: monospace;">Loading...</div>
     <div id="vfx-canvas-container"></div>
     <div id="text-container">
         <h1>SURFACE TENSION</h1>
@@ -250,7 +247,6 @@
         },
 
         getSimplexNoiseShader() {
-            // This function is kept for now, but not used by the simplified shader
             return `
                 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
                 vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -283,7 +279,6 @@
             const container = document.getElementById(id);
             if (!container) return;
 
-            // This try-catch is crucial for WebGL/Shader related errors
             try {
                 const scene = new THREE.Scene();
                 const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
@@ -325,8 +320,7 @@
 
             } catch (e) {
                 console.error(`Error creating VFX scene "${id}":`, e);
-                // Re-throw the error to be caught by the main handler
-                throw e;
+                container.innerHTML = `<p style="padding: 2em; text-align: center;">A WebGL error occurred.</p>`;
             }
         },
         
@@ -371,22 +365,78 @@
                         }`,
                     fragmentShader: `
                         precision highp float; 
-                        
+                        ${this.getSimplexNoiseShader()}
+
                         varying vec2 vUv;
-                        uniform float uTime;
                         
-                        // A much simpler shader for debugging purposes.
-                        // This will show a colorful gradient if the WebGL pipeline is working.
+                        uniform float uTime;
+                        uniform vec2 uResolution;
+                        uniform float uIntensity;
+                        uniform float uNoiseEvolution;
+                        uniform vec3 uColor1;
+                        uniform vec3 uColor2;
+                        uniform vec3 uColor3;
+
+                        // Function for layered, organic noise (Fractal Brownian Motion)
+                        float fbm(vec3 p) {
+                            float f = 0.0;
+                            mat3 m = mat3(0.00, 0.80, 0.60, -0.80, 0.36, -0.48, -0.60, -0.48, 0.64);
+                            f  = 0.5000 * snoise(p); p = m * p * 2.02;
+                            f += 0.2500 * snoise(p); p = m * p * 2.03;
+                            f += 0.1250 * snoise(p); p = m * p * 2.01;
+                            f += 0.0625 * snoise(p);
+                            return f / 0.9375;
+                        }
+
                         void main() {
                             vec2 uv = vUv;
-                            float time = uTime * 0.1; // Use uTime to see if it's animating
-                            vec3 color = vec3(uv.x, uv.y, abs(sin(time)));
+                            float time = uTime * uNoiseEvolution; 
+                            
+                            // 1. THE FLOW FIELD: A multi-layered current for complex motion
+                            vec2 flow = vec2(
+                                fbm(vec3(uv * 0.5, time * 0.5)),
+                                fbm(vec3(uv * 0.5, time * 0.5 + 10.0))
+                            );
+                            
+                            // 2. DISTORTION: Use the flow field to warp the texture coordinates
+                            // This creates the primary fluid motion
+                            vec2 distortedUv = uv + flow * 0.15;
+
+                            // 3. VOLUMETRIC LAYERING (3D EFFECT): Sample noise at different "depths" (z-values)
+                            // and speeds to create parallax and a sense of volume.
+                            float pattern1 = fbm(vec3(distortedUv * 2.0, time)); // Mid-ground layer
+                            float pattern2 = fbm(vec3(distortedUv * 4.0, time * 0.7)); // Faster, detailed foreground
+                            float pattern3 = fbm(vec3(distortedUv * 1.0, time * 0.3)); // Slow, deep background
+
+                            // Sharpen the patterns to create wispy, filament-like details
+                            float sharpPattern = smoothstep(0.45, 0.55, pattern2);
+
+                            // 4. DYNAMIC COLOR MIXING: Blend the cinematic colors based on the flowing, multi-layered patterns
+                            vec3 color = mix(uColor1, uColor2, smoothstep(-0.2, 0.2, pattern3)); // Base color from deep background
+                            color = mix(color, uColor3, sharpPattern); // Add highlights with the fast foreground
+
+                            // 5. ATMOSPHERE: Add a soft vignette and subtle grain for an analogue feel
+                            float vignette = 1.0 - length((uv - 0.5) * 1.1);
+                            vignette = smoothstep(0.0, 0.8, vignette);
+                            
+                            float grain = (snoise(vec3(uv * 800.0, uTime * 10.0)) * 0.5 + 0.5) * 0.05;
+
+                            // Final composition, modulated by the global intensity
+                            color = color * vignette * uIntensity + grain;
+                            
                             gl_FragColor = vec4(color, 1.0);
                         }`
                 },
                 update: ({ t, main, variations, pNow }) => {
-                    // Only update the time uniform for the simple shader
+                    // Update shader uniforms with values from the InfiniteVariationSystem
                     main.material.uniforms.uTime.value = t;
+                    main.material.uniforms.uIntensity.value = variations.intensity;
+                    main.material.uniforms.uNoiseEvolution.value = variations.noise.evolution;
+
+                    // Auto-cycle through color palettes
+                    if (pNow - this.lastPaletteChange > this.paletteChangeInterval) {
+                       changePalette(main);
+                    }
                 }
             });
         },
@@ -399,9 +449,7 @@
                     if (sceneData && sceneData.camera) {
                         sceneData.camera.aspect = container.clientWidth / container.clientHeight;
                         sceneData.camera.updateProjectionMatrix();
-                        if (sceneData.mesh.material.uniforms.uResolution) {
-                           sceneData.mesh.material.uniforms.uResolution.value.set(container.clientWidth, container.clientHeight);
-                        }
+                        sceneData.mesh.material.uniforms.uResolution.value.set(container.clientWidth, container.clientHeight);
                     }
                     renderer.setSize(container.clientWidth, container.clientHeight);
                 }
@@ -409,33 +457,12 @@
         }
     };
 
-    // --- ROBUST INITIALIZATION ---
     window.addEventListener('load', () => {
-        const loadingMessage = document.getElementById('loading-message');
-        try {
-            if (!window.WebGLRenderingContext) {
-                throw new Error("Your browser does not support WebGL, which is required for this experience.");
-            }
-            console.log("WebGL is supported. Initializing Cinematic Engine...");
+        if (window.WebGLRenderingContext) {
             CinematicEngine.initCinematicAtmosphere();
             window.addEventListener('resize', () => CinematicEngine.handleResize());
-            console.log("Cinematic Engine initialized successfully.");
-            if(loadingMessage) loadingMessage.remove();
-
-        } catch (error) {
-            console.error("A fatal error occurred during page initialization:", error);
-            const errorContainer = document.getElementById('vfx-canvas-container') || document.body;
-            // Clear any existing content and show the error
-            errorContainer.innerHTML = `
-                <div style="padding: 2em; text-align: center; color: white; font-family: monospace; z-index: 1000; position: relative;">
-                    <h2 style="color: #ff6b6b;">An Error Occurred</h2>
-                    <p style="margin-top: 1em;">The background animation could not be started. Please check the browser console (F12) for more details.</p>
-                    <pre style="text-align: left; display: inline-block; margin-top: 1.5em; padding: 1em; background: rgba(0,0,0,0.3); border: 1px solid #555; border-radius: 5px; max-width: 90%; overflow-wrap: break-word; white-space: pre-wrap;">${error.stack}</pre>
-                </div>`;
-            if(loadingMessage) loadingMessage.remove();
-            // Hide the main text if an error occurs to make the error message more prominent
-            const textContainer = document.getElementById('text-container');
-            if(textContainer) textContainer.style.display = 'none';
+        } else {
+            document.getElementById('vfx-canvas-container').innerHTML = `<p style="padding: 2em; text-align: center;">Your browser does not support WebGL, which is required for this experience.</p>`;
         }
     });
     </script>
