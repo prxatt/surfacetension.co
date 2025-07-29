@@ -417,8 +417,8 @@
                             float detailPattern = fbm(vec3(warpedUv * ( (8.0 + uComplexity * 4.0) * uDPR ), baseSpeed * 2.0));
                             
                             // FIX: Smoother beat reactions
-                            float kickPulse = 1.0 - smoothstep(0.0, 0.8, length(vUv - 0.5)) * uKick * 1.5;
-                            float snareFlash = smoothstep(0.95, 1.0, 1.0 - length((vUv - 0.5) * (1.0 - uSnare * 0.5))) * uSnare * 1.2;
+                            float kickPulse = 1.0 - smoothstep(0.0, 0.8, length(vUv - 0.5)) * uKick * 1.2;
+                            float snareFlash = smoothstep(0.95, 1.0, 1.0 - length((vUv - 0.5) * (1.0 - uSnare * 0.5))) * uSnare * 1.0;
                             float hihatGlimmer = pow(snoise(vec3(vUv * (300.0 * uDPR), uTime * 30.0)), 18.0) * uHihat * 5.0;
                             
                             float finalPattern = mix(basePattern, basePattern + detailPattern * 0.3, energy);
@@ -426,7 +426,7 @@
 
                             vec3 color = mix(uColor1, uColor2, smoothstep(-0.2, 0.2, finalPattern));
                             color = mix(color, uColor3, smoothstep(0.4, 0.6, detailPattern));
-                            color += snareFlash * uColor3 * 1.2;
+                            color += snareFlash * uColor3;
                             color += hihatGlimmer * vec3(1.0);
                             
                             finalColor += color;
@@ -474,7 +474,7 @@
                         const source = this.audio.context.createMediaStreamSource(stream);
                         this.audio.analyser = this.audio.context.createAnalyser();
                         this.audio.analyser.fftSize = 2048;
-                        this.audio.analyser.smoothingTimeConstant = 0.8;
+                        this.audio.analyser.smoothingTimeConstant = 0.7;
                         source.connect(this.audio.analyser);
                         
                         const bufferLength = this.audio.analyser.frequencyBinCount;
@@ -542,8 +542,8 @@
                     return flux / (endBin - startBin + 1);
                 }
 
-                this.audio.instruments.kick.value = getBandFlux(bands.kick[0], bands.kick[1]) / 18;
-                this.audio.instruments.snare.value = getBandFlux(bands.snare[0], bands.snare[1]) / 8;
+                this.audio.instruments.kick.value = getBandFlux(bands.kick[0], bands.kick[1]) / 16;
+                this.audio.instruments.snare.value = getBandFlux(bands.snare[0], bands.snare[1]) / 7;
                 this.audio.instruments.hihat.value = getBandFlux(bands.hihat[0], bands.hihat[1]) / 4;
                 this.audio.instruments.bass.value = getBandFlux(bands.bass[0], bands.bass[1]) / 20;
                 this.audio.instruments.melody.value = getBandFlux(bands.melody[0], bands.melody[1]) / 15;
@@ -618,8 +618,7 @@
 
                 this.updateColorPalette();
                 
-                // FIX: Smoother lerp factor
-                const lerpFactor = 0.07;
+                const lerpFactor = 0.09;
                 mesh.material.uniforms.uTime.value = t;
                 
                 if (this.audio.analyser) {
