@@ -267,15 +267,16 @@
             scenes: {},
             renderers: [],
             audio: {
+                // --- UX FIX: Added audioContext for proper toggling ---
+                audioContext: null,
                 analyser: null,
                 dataArray: null,
                 lastDataArray: null,
                 smoothedEnergy: 0,
                 smoothedTone: 0.5,
-                // --- ADVANCED ANALYSIS ---
-                archetype: 0.5, // 0: Organic/Vocal, 1: Electronic/Percussive
+                archetype: 0.5, 
                 archetypeHistory: new Array(100).fill(0.5),
-                vocalClarity: 0, // 0: Noisy/Complex, 1: Clear Tonal/Vocal
+                vocalClarity: 0,
                 vocalClarityHistory: new Array(50).fill(0),
                 flux: { bass: 0, mid: 0, high: 0 },
                 smoothedFlux: { bass: 0, mid: 0, high: 0 },
@@ -288,9 +289,8 @@
             color: {
                 currentPalette: {},
                 lastTone: 0.5,
-                // --- IMPROVED: More frequent color changes ---
-                toneChangeThreshold: 0.035, // Lowered for more sensitivity
-                paletteChangeInterval: 20000, // 20 seconds
+                toneChangeThreshold: 0.035,
+                paletteChangeInterval: 20000,
                 lastAudioPaletteChange: 0,
             },
 
@@ -325,19 +325,31 @@
 
             initAudio() {
                 const audioButton = document.getElementById('audio-button');
+                const uiContainer = document.getElementById('ui-container');
+
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                     audioButton.textContent = "Audio API not supported";
                     return;
                 }
 
                 audioButton.addEventListener('click', async () => {
-                    if (this.audio.analyser) return;
+                    // --- UX FIX: Handle disabling audio ---
+                    if (this.audio.audioContext && this.audio.audioContext.state === 'running') {
+                        this.audio.audioContext.close();
+                        this.audio.analyser = null;
+                        this.audio.audioContext = null;
+                        audioButton.textContent = "Enable Audio";
+                        audioButton.classList.remove('active');
+                        uiContainer.classList.remove('audio-active', 'ui-hidden');
+                        return;
+                    }
 
+                    // --- Enable audio logic ---
                     try {
-                        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        this.audio.audioContext = new (window.AudioContext || window.webkitAudioContext)();
                         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                        const source = audioContext.createMediaStreamSource(stream);
-                        this.audio.analyser = audioContext.createAnalyser();
+                        const source = this.audio.audioContext.createMediaStreamSource(stream);
+                        this.audio.analyser = this.audio.audioContext.createAnalyser();
                         this.audio.analyser.fftSize = 1024;
                         this.audio.analyser.smoothingTimeConstant = 0.8;
                         source.connect(this.audio.analyser);
@@ -349,13 +361,14 @@
                         audioButton.textContent = "Audio Enabled";
                         audioButton.classList.add('active');
                         
-                        const uiContainer = document.getElementById('ui-container');
                         uiContainer.classList.add('audio-active');
                         setTimeout(() => uiContainer.classList.add('ui-hidden'), 2000);
 
                     } catch (err) {
                         console.error("Error accessing microphone:", err);
                         audioButton.textContent = "Audio Denied";
+                        if (this.audio.audioContext) this.audio.audioContext.close();
+                        this.audio.audioContext = null;
                     }
                 });
             },
@@ -447,7 +460,6 @@
                             uKick: { value: 0.0 },
                             uSnare: { value: 0.0 },
                             uHiHat: { value: 0.0 },
-                            // --- NEW UNIFORMS ---
                             uArchetype: { value: 0.5 },
                             uVocalClarity: { value: 0.0 },
                         },
@@ -473,7 +485,6 @@
                             uniform float uKick;
                             uniform float uSnare;
                             uniform float uHiHat;
-                            // --- NEW UNIFORMS ---
                             uniform float uArchetype;
                             uniform float uVocalClarity;
 
@@ -483,7 +494,6 @@
                                 return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
                             }
 
-                            // --- IMPROVED: More advanced FBM for richer textures ---
                             float fbm(vec3 p) {
                                 float f = 0.0;
                                 mat3 m = mat3(0.00, 0.80, 0.60, -0.80, 0.36, -0.48, -0.60, -0.48, 0.64);
@@ -494,11 +504,12 @@
                                 return f / 0.9375;
                             }
                             
-                            // --- NEW: Domain Warping function for fluid, non-repetitive motion ---
-                            vec2 domainWarp(vec2 uv, float time, float warpAmount) {
-                                vec3 p = vec3(uv * 2.0, time * 0.1);
-                                float warpX = fbm(p) * warpAmount;
-                                float warpY = fbm(p + vec3(1.0, 2.0, 0.0)) * warpAmount;
+                            // --- MAGIC & VARIATION: More complex Domain Warping ---
+                            vec2 domainWarp(vec2 uv, float time, float warpAmount, float scale) {
+                                vec3 p1 = vec3(uv * scale, time);
+                                vec3 p2 = vec3(uv * scale + vec2(5.2,1.3), time);
+                                float warpX = fbm(p1) * warpAmount;
+                                float warpY = fbm(p2) * warpAmount;
                                 return vec2(warpX, warpY);
                             }
 
@@ -511,30 +522,26 @@
                                 float warpFactor = uDropIntensity * 0.1;
                                 vec2 warpUv = centeredUv * (1.0 + warpFactor) + 0.5;
                                 
-                                // --- DYNAMIC MOTION ---
-                                // The base speed of the visual evolution
-                                float baseSpeed = t * 0.05 + t * uAudioEnergy * 0.1;
-                                // The amount of fluid distortion, increases with energy, but calms with vocal clarity
-                                float warpAmount = (0.3 + uAudioEnergy * 0.5) * (1.0 - uVocalClarity * 0.5);
+                                // --- SLOWER MOVEMENT & MORE MAGIC ---
+                                float baseSpeed = t * 0.02 + t * uAudioEnergy * 0.05; // Reduced speed
+                                float warpAmount = (0.15 + uAudioEnergy * 0.3) * (1.0 - uVocalClarity * 0.6);
                                 
-                                // --- IMPROVED: Apply Domain Warping for complex motion ---
-                                vec2 warpedUv = warpUv + domainWarp(warpUv, t, warpAmount);
+                                // --- MORE VISUAL VARIATION: Layered domain warping ---
+                                vec2 warpOffset1 = domainWarp(warpUv, t * 0.2, warpAmount, 2.0);
+                                vec2 warpOffset2 = domainWarp(warpUv + warpOffset1, t * 0.1, warpAmount * 0.5, 6.0);
+                                vec2 warpedUv = warpUv + warpOffset2;
 
                                 // --- VISUAL SHAPE & TEXTURE ---
-                                // Base pattern with multiple layers for depth
                                 float pattern = fbm(vec3(warpedUv * 2.0 + uNoiseSeed, baseSpeed));
-                                
-                                // Detail layer, more prominent in electronic music (high archetype)
                                 float detailPattern = fbm(vec3(warpedUv * 8.0, baseSpeed * 2.0));
+                                float wisps = fbm(vec3(warpedUv * 15.0, baseSpeed * 4.0));
                                 
-                                // Combine patterns. High vocal clarity softens the details.
+                                // Combine patterns for rich texture
                                 float finalPattern = mix(pattern, pattern + detailPattern * 0.3, uArchetype * (1.0 - uVocalClarity * 0.7));
+                                finalPattern += wisps * uArchetype * 0.15;
 
                                 // --- VOCAL & BEAT REACTIONS ---
-                                // A soft, central glow for vocals/tonal sounds
                                 float vocalBloom = smoothstep(0.0, 0.8, 1.0 - length(centeredUv)) * uVocalClarity * 0.4;
-                                
-                                // Beat ripples, now more pronounced
                                 float kickRipple = 1.0 - smoothstep(0.0, 0.6, length(centeredUv)) * uKick * 1.2;
                                 float snareRipple = 1.0 - smoothstep(0.1, 0.3, length(centeredUv)) * uSnare * 0.8;
                                 finalPattern *= kickRipple * snareRipple;
@@ -549,15 +556,11 @@
                                 float finalIntensity = 0.6 + uAudioEnergy * 1.2 + uDropIntensity * 2.0;
                                 vec3 finalColor = color * vignette * finalIntensity;
                                 
-                                // Iridescent glow on drops, now more vibrant
                                 float rainbowDist = length(centeredUv + snoise(vec3(uv * 2.0, t * 0.1)) * 0.1 * uDropIntensity);
                                 vec3 rainbowColor = hsv2rgb(vec3(rainbowDist * 2.0 - t * 0.2, 0.8, 1.0));
                                 finalColor += uDropIntensity * rainbowColor * (1.0 - smoothstep(0.0, 0.5, rainbowDist)) * 0.8;
 
-                                // Hi-hat sparkles, more noticeable in electronic music
                                 finalColor += snoise(vec3(uv * 200.0, t * 10.0)) * uHiHat * uArchetype * 0.7;
-
-                                // A subtle grain to finish the image
                                 finalColor += (snoise(vec3(uv * 800.0, t * 2.0)) * 0.5 + 0.5) * 0.02;
                                 
                                 gl_FragColor = vec4(finalColor, 1.0);
@@ -575,9 +578,8 @@
                             const bassBins = Math.floor(bufferLength * 0.1);
                             const midBins = Math.floor(bufferLength * 0.6);
                             
-                            // --- ADVANCED: Timbre and Vocal analysis variables ---
-                            let geometricMean = 0, arithmeticMean = 0, peakValue = 0;
-                            let vocalEnergy = 0, totalVocalWeight = 0, vocalCentroid = 0;
+                            let geometricMean = 0, arithmeticMean = 0;
+                            let vocalEnergy = 0, vocalCentroid = 0;
 
                             this.audio.flux = { bass: 0, mid: 0, high: 0 };
                             for (let i = 0; i < bufferLength; i++) {
@@ -593,12 +595,9 @@
                                 spectralCentroid += i * val;
                                 spectralSum += val;
 
-                                // --- Timbre analysis calculations ---
                                 if(currentVal > 0) geometricMean += Math.log(currentVal);
                                 arithmeticMean += currentVal;
-                                if(currentVal > peakValue) peakValue = currentVal;
                                 
-                                // --- Vocal clarity analysis ---
                                 if (i > bassBins && i < midBins) {
                                     vocalEnergy += currentVal;
                                     vocalCentroid += i * currentVal;
@@ -609,12 +608,10 @@
                             energy = Math.sqrt(energy / bufferLength);
                             if (spectralSum > 0) spectralCentroid /= spectralSum;
 
-                            // --- Finalize timbre metrics ---
                             arithmeticMean /= bufferLength;
                             geometricMean = Math.exp(geometricMean / bufferLength);
                             const spectralFlatness = arithmeticMean > 0 ? geometricMean / arithmeticMean : 0;
                             
-                            // --- Finalize vocal clarity ---
                             if(vocalEnergy > 0) vocalCentroid /= vocalEnergy;
                             const vocalFocus = 1.0 - Math.abs(vocalCentroid - (bassBins + (midBins - bassBins) / 2)) / ((midBins - bassBins) / 2);
                             this.audio.vocalClarityHistory.push(vocalFocus * (1.0 - spectralFlatness));
@@ -622,7 +619,6 @@
                             const avgVocalClarity = this.audio.vocalClarityHistory.reduce((a, b) => a + b, 0) / this.audio.vocalClarityHistory.length;
                             this.audio.vocalClarity = this.audio.vocalClarity * 0.95 + avgVocalClarity * 0.05;
 
-                            // --- Update Archetype (Genre Guess) ---
                             const rawArchetype = Math.min(1.0, (1.0 - spectralFlatness) * 1.5);
                             this.audio.archetypeHistory.push(rawArchetype);
                             this.audio.archetypeHistory.shift();
@@ -651,7 +647,6 @@
                             }
                             main.material.uniforms.uDropIntensity.value *= 0.96;
                             
-                            // --- Update Shader Uniforms ---
                             main.material.uniforms.uAudioEnergy.value = this.audio.smoothedEnergy;
                             main.material.uniforms.uTone.value = this.audio.smoothedTone;
                             main.material.uniforms.uKick.value = this.audio.smoothedFlux.bass;
@@ -660,7 +655,6 @@
                             main.material.uniforms.uArchetype.value = this.audio.archetype;
                             main.material.uniforms.uVocalClarity.value = this.audio.vocalClarity;
 
-                            // --- IMPROVED: More frequent color changes ---
                             if (Math.abs(this.audio.smoothedTone - this.color.lastTone) > this.color.toneChangeThreshold || pNow - this.color.lastAudioPaletteChange > this.color.paletteChangeInterval) {
                                 const newPalette = generatePaletteFromTone(this.audio.smoothedTone);
                                 transitionToPalette(main, newPalette);
@@ -668,7 +662,6 @@
                                 this.color.lastAudioPaletteChange = pNow;
                             }
                         } else {
-                            // Non-Audio Mode
                              if (pNow - this.color.lastAudioPaletteChange > this.color.paletteChangeInterval) {
                                 const newPalette = generatePaletteFromTone(Math.random());
                                 transitionToPalette(main, newPalette);
