@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Surface Tension - AI Edition</title>
+    <title>Surface Tension</title>
     
     <!-- FAVICON: Custom SVG favicon for the brand -->
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M20 25 C20 15, 30 15, 40 25 L60 75 C70 85, 80 85, 80 75' stroke='%23FFFFFF' stroke-width='10' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M45 50 L75 50' stroke='%23FFFFFF' stroke-width='10' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
@@ -246,7 +246,7 @@
             renderers: [],
             clock: null,
             lastRandomizationTime: 0,
-            idleNoiseMix: { value: 0 }, // FIX: For smooth idle transition
+            idleNoiseMix: { value: 0 },
 
             audio: {
                 context: null,
@@ -257,6 +257,7 @@
                     bass: { value: 0 }, kick: { value: 0 }, snare: { value: 0 },
                     hihat: { value: 0 }, vocals: { value: 0 }, melody: { value: 0 }
                 },
+                // FIX: Restored the 'genre' object
                 genre: {
                     current: 'ambient',
                     profiles: {
@@ -274,7 +275,7 @@
                     wasActive: false,
                     formantConfidence: 0,
                     bloomPosition: new THREE.Vector2(0.5, 0.5),
-                    sideCounter: 0 // FIX: For alternating speaker sides
+                    sideCounter: 0
                 },
                 spectral: {
                     energy: 0, smoothedEnergy: 0, energyHistory: new Array(128).fill(0),
@@ -336,8 +337,8 @@
                         uTime: { value: 0 }, 
                         uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
                         uNoiseSeed: { value: Math.random() * 1000 },
-                        uTargetNoiseSeed: { value: Math.random() * 1000 }, // FIX
-                        uNoiseMix: { value: 0.0 }, // FIX
+                        uTargetNoiseSeed: { value: Math.random() * 1000 },
+                        uNoiseMix: { value: 0.0 },
                         uAudioEnergy: { value: 0.0 },
                         uDropIntensity: { value: 0.0 },
                         uBass: { value: 0.0 },
@@ -352,6 +353,7 @@
                         uVignette: { value: 0.3 },
                         uFilmGrain: { value: 0.03 },
                         uComplexity: { value: 0.5 },
+                        uDPR: { value: 1.0 },
                     },
                     vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
                     fragmentShader: `
@@ -378,8 +380,8 @@
                         uniform float uVignette;
                         uniform float uFilmGrain;
                         uniform float uComplexity;
+                        uniform float uDPR;
 
-                        // Domain Warping for fluid motion
                         vec2 domainWarp(vec2 uv, float warpAmount, float seed) {
                             vec3 p = vec3(uv * 2.0 + seed, uTime * 0.05);
                             float warpX = fbm(p) * warpAmount;
@@ -391,58 +393,46 @@
                             float energy = pow(uAudioEnergy, 1.5);
                             float warpAmount = (0.15 + energy * 0.5) * (1.0 - uVocals * 0.5);
 
-                            // FIX: Smoothly mix between two noise patterns for seamless idle transitions
                             vec2 warp1 = domainWarp(vUv, warpAmount, uNoiseSeed);
                             vec2 warp2 = domainWarp(vUv, warpAmount, uTargetNoiseSeed);
                             vec2 finalWarp = mix(warp1, warp2, uNoiseMix);
                             vec2 warpedUv = vUv + finalWarp;
 
-                            // --- Volumetric Rainbow Vocal Warp ---
                             vec3 finalColor;
                             vec2 vocalWarp = vec2(0.0);
                             if (uVocals > 0.01) {
                                 float vocalDist = length(vUv - uVocalBloomPos);
                                 float vocalIntensity = smoothstep(0.6, 0.0, vocalDist) * uVocals;
                                 
-                                // Create a warp field
                                 vec2 direction = normalize(vUv - uVocalBloomPos);
                                 vocalWarp = direction * fbm(vec3(vUv * 3.0, uTime * 0.2)) * vocalIntensity * 0.1;
 
-                                // Create the rainbow color
                                 vec3 rainbow = hsv2rgb(vec3(vocalDist * 1.5 - uTime * 0.2, 0.8, 1.0));
                                 finalColor += rainbow * vocalIntensity * 1.5;
                             }
                             warpedUv += vocalWarp;
 
-
-                            // --- Multi-Layer Pattern Generation ---
                             float baseSpeed = uTime * 0.04 + uTime * energy * 0.1;
                             float basePattern = fbm(vec3(warpedUv * (2.0 + uComplexity * 2.0), baseSpeed));
-                            float detailPattern = fbm(vec3(warpedUv * (8.0 + uComplexity * 4.0), baseSpeed * 2.0));
+                            float detailPattern = fbm(vec3(warpedUv * ( (8.0 + uComplexity * 4.0) * uDPR ), baseSpeed * 2.0));
                             
-                            // --- Instrument-Specific Visuals ---
                             float kickPulse = 1.0 - smoothstep(0.0, 0.8, length(vUv - 0.5)) * uKick * 1.8;
                             float snareFlash = smoothstep(0.95, 1.0, 1.0 - length((vUv - 0.5) * (1.0 - uSnare * 0.5))) * uSnare * 1.5;
-                            float hihatGlimmer = pow(snoise(vec3(vUv * 300.0, uTime * 30.0)), 18.0) * uHihat * 5.0;
+                            float hihatGlimmer = pow(snoise(vec3(vUv * (300.0 * uDPR), uTime * 30.0)), 18.0) * uHihat * 5.0;
                             
-                            // --- Blending Layers ---
                             float finalPattern = mix(basePattern, basePattern + detailPattern * 0.3, energy);
                             finalPattern += uBass * 0.2;
 
-                            // --- Intelligent Color Engine ---
                             vec3 color = mix(uColor1, uColor2, smoothstep(-0.2, 0.2, finalPattern));
                             color = mix(color, uColor3, smoothstep(0.4, 0.6, detailPattern));
                             color += snareFlash * uColor3 * 1.5;
                             color += hihatGlimmer * vec3(1.0);
                             
-                            // Additive blend for the vocal rainbow
                             finalColor += color;
                             
-                            // Apply pulses and overall energy
                             finalColor *= kickPulse;
                             finalColor *= (0.6 + energy * 1.2 + uDropIntensity * 2.0);
 
-                            // --- Professional Post-Processing ---
                             float vignette = 1.0 - length((vUv - 0.5) * (1.0 - uVignette));
                             finalColor *= vignette;
                             float grain = (snoise(vec3(vUv * uResolution.x / 2.0, uTime * 3.0)) * 2.0 - 1.0) * uFilmGrain;
@@ -508,11 +498,13 @@
                 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
                 renderer.setClearColor(0x000000, 0); 
                 renderer.setSize(container.clientWidth, container.clientHeight);
-                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+                const dpr = Math.min(window.devicePixelRatio, 2.5);
+                renderer.setPixelRatio(dpr);
                 container.appendChild(renderer.domElement);
                 this.renderers.push(renderer);
                 const shader = this.getVFXShader();
                 const material = new THREE.ShaderMaterial(shader);
+                material.uniforms.uDPR.value = dpr;
                 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(20, 12, 1, 1), material);
                 scene.add(mesh);
                 this.scenes.main = { scene, camera, renderer, mesh };
@@ -561,11 +553,9 @@
                 this.audio.instruments.vocals.value = this.audio.vad.formantConfidence;
 
                 if (this.audio.vad.isActive && !this.audio.vad.wasActive) {
-                    // FIX: Alternate bloom position between left, right, and center
-                    const side = this.audio.vad.sideCounter % 3;
-                    if (side === 0) this.audio.vad.bloomPosition.set(0.2 + Math.random() * 0.2, Math.random()); // Left
-                    else if (side === 1) this.audio.vad.bloomPosition.set(0.8 - Math.random() * 0.2, Math.random()); // Right
-                    else this.audio.vad.bloomPosition.set(0.5, 0.5); // Center
+                    const side = this.audio.vad.sideCounter % 2;
+                    if (side === 0) this.audio.vad.bloomPosition.set(0.15 + Math.random() * 0.2, Math.random() * 0.6 + 0.2); // Left side
+                    else this.audio.vad.bloomPosition.set(0.85 - Math.random() * 0.2, Math.random() * 0.6 + 0.2); // Right side
                     this.audio.vad.sideCounter++;
                 }
 
@@ -626,7 +616,7 @@
 
                 this.updateColorPalette();
                 
-                const lerpFactor = 0.08; // Slower lerp for smoother transitions
+                const lerpFactor = 0.08;
                 mesh.material.uniforms.uTime.value = t;
                 
                 if (this.audio.analyser) {
@@ -639,19 +629,18 @@
                     mesh.material.uniforms.uVocals.value = THREE.MathUtils.lerp(mesh.material.uniforms.uVocals.value, this.audio.instruments.vocals.value, lerpFactor * 0.5);
                     mesh.material.uniforms.uVocalBloomPos.value.lerp(this.audio.vad.bloomPosition, 0.05);
                 } else {
-                    // FIX: Seamless idle animation logic
                     if (t > this.lastRandomizationTime + 20) {
                         mesh.material.uniforms.uTargetNoiseSeed.value = Math.random() * 1000;
                         gsap.to(this.idleNoiseMix, {
                             value: 1.0,
-                            duration: 5.0, // 5 second cross-fade
+                            duration: 5.0,
                             ease: "sine.inOut",
                             onComplete: () => {
                                 mesh.material.uniforms.uNoiseSeed.value = mesh.material.uniforms.uTargetNoiseSeed.value;
                                 this.idleNoiseMix.value = 0.0;
                             }
                         });
-                        this.lastRandomizationTime = t + 5.0; // Wait for transition to finish
+                        this.lastRandomizationTime = t + 5.0;
                     }
                     mesh.material.uniforms.uNoiseMix.value = this.idleNoiseMix.value;
                     const ambientEnergy = (Math.sin(t * 0.2) * 0.5 + 0.5) * 0.15;
@@ -670,6 +659,9 @@
                             sceneData.camera.aspect = container.clientWidth / container.clientHeight;
                             sceneData.camera.updateProjectionMatrix();
                             sceneData.mesh.material.uniforms.uResolution.value.set(container.clientWidth, container.clientHeight);
+                            const dpr = Math.min(window.devicePixelRatio, 2.5);
+                            renderer.setPixelRatio(dpr);
+                            sceneData.mesh.material.uniforms.uDPR.value = dpr;
                         }
                         renderer.setSize(container.clientWidth, container.clientHeight);
                     }
