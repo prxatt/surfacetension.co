@@ -247,6 +247,7 @@
             clock: null,
             lastRandomizationTime: 0,
             idleNoiseMix: { value: 0 },
+            wakeLock: null, // FIX: For preventing screen sleep
 
             audio: {
                 context: null,
@@ -389,7 +390,6 @@
                         }
 
                         void main() {
-                            // FIX: Smoother energy curve
                             float energy = pow(uAudioEnergy, 1.2);
                             float warpAmount = (0.15 + energy * 0.5) * (1.0 - uVocals * 0.5);
 
@@ -416,7 +416,6 @@
                             float basePattern = fbm(vec3(warpedUv * (2.0 + uComplexity * 2.0), baseSpeed));
                             float detailPattern = fbm(vec3(warpedUv * ( (8.0 + uComplexity * 4.0) * uDPR ), baseSpeed * 2.0));
                             
-                            // FIX: Smoother beat reactions
                             float kickPulse = 1.0 - smoothstep(0.0, 0.8, length(vUv - 0.5)) * uKick * 1.2;
                             float snareFlash = smoothstep(0.95, 1.0, 1.0 - length((vUv - 0.5) * (1.0 - uSnare * 0.5))) * uSnare * 1.0;
                             float hihatGlimmer = pow(snoise(vec3(vUv * (300.0 * uDPR), uTime * 30.0)), 18.0) * uHihat * 5.0;
@@ -457,7 +456,25 @@
                         el.classList.remove('content-hidden');
                     });
                     this.initUIInteractions();
+                    // FIX: Add visibility change listener for Wake Lock
+                    document.addEventListener('visibilitychange', () => this.handleVisibilityChange());
                 } catch (error) { this.handleFatalError(error); }
+            },
+
+            // FIX: New function to handle Wake Lock
+            async requestWakeLock() {
+                if ('wakeLock' in navigator) {
+                    try {
+                        this.wakeLock = await navigator.wakeLock.request('screen');
+                        this.wakeLock.addEventListener('release', () => {
+                            console.log('Wake Lock was released');
+                            this.wakeLock = null;
+                        });
+                        console.log('Wake Lock is active');
+                    } catch (err) {
+                        console.error(`${err.name}, ${err.message}`);
+                    }
+                }
             },
 
             initAudio() {
@@ -485,6 +502,10 @@
                         audioButton.classList.add('active');
                         document.getElementById('ui-container').classList.add('audio-active');
                         setTimeout(() => document.getElementById('ui-container').classList.add('ui-hidden'), 2000);
+                        
+                        // FIX: Request wake lock when audio is enabled
+                        this.requestWakeLock();
+
                     } catch (err) {
                         console.error("Error accessing microphone:", err);
                         audioButton.textContent = "Audio Denied";
@@ -693,6 +714,13 @@
                         showUi();
                     }
                 });
+            },
+            
+            // FIX: New function to handle visibility changes for Wake Lock
+            handleVisibilityChange() {
+                if (this.wakeLock !== null && document.visibilityState === 'visible') {
+                    this.requestWakeLock();
+                }
             },
 
             handleFatalError(error) {
