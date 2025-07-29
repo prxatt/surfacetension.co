@@ -257,7 +257,6 @@
                     bass: { value: 0 }, kick: { value: 0 }, snare: { value: 0 },
                     hihat: { value: 0 }, vocals: { value: 0 }, melody: { value: 0 }
                 },
-                // FIX: Restored the 'genre' object
                 genre: {
                     current: 'ambient',
                     profiles: {
@@ -390,7 +389,8 @@
                         }
 
                         void main() {
-                            float energy = pow(uAudioEnergy, 1.5);
+                            // FIX: Smoother energy curve
+                            float energy = pow(uAudioEnergy, 1.2);
                             float warpAmount = (0.15 + energy * 0.5) * (1.0 - uVocals * 0.5);
 
                             vec2 warp1 = domainWarp(vUv, warpAmount, uNoiseSeed);
@@ -416,8 +416,9 @@
                             float basePattern = fbm(vec3(warpedUv * (2.0 + uComplexity * 2.0), baseSpeed));
                             float detailPattern = fbm(vec3(warpedUv * ( (8.0 + uComplexity * 4.0) * uDPR ), baseSpeed * 2.0));
                             
-                            float kickPulse = 1.0 - smoothstep(0.0, 0.8, length(vUv - 0.5)) * uKick * 1.8;
-                            float snareFlash = smoothstep(0.95, 1.0, 1.0 - length((vUv - 0.5) * (1.0 - uSnare * 0.5))) * uSnare * 1.5;
+                            // FIX: Smoother beat reactions
+                            float kickPulse = 1.0 - smoothstep(0.0, 0.8, length(vUv - 0.5)) * uKick * 1.5;
+                            float snareFlash = smoothstep(0.95, 1.0, 1.0 - length((vUv - 0.5) * (1.0 - uSnare * 0.5))) * uSnare * 1.2;
                             float hihatGlimmer = pow(snoise(vec3(vUv * (300.0 * uDPR), uTime * 30.0)), 18.0) * uHihat * 5.0;
                             
                             float finalPattern = mix(basePattern, basePattern + detailPattern * 0.3, energy);
@@ -425,7 +426,7 @@
 
                             vec3 color = mix(uColor1, uColor2, smoothstep(-0.2, 0.2, finalPattern));
                             color = mix(color, uColor3, smoothstep(0.4, 0.6, detailPattern));
-                            color += snareFlash * uColor3 * 1.5;
+                            color += snareFlash * uColor3 * 1.2;
                             color += hihatGlimmer * vec3(1.0);
                             
                             finalColor += color;
@@ -455,6 +456,7 @@
                         el.classList.add('content-visible');
                         el.classList.remove('content-hidden');
                     });
+                    this.initUIInteractions();
                 } catch (error) { this.handleFatalError(error); }
             },
 
@@ -498,7 +500,7 @@
                 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
                 renderer.setClearColor(0x000000, 0); 
                 renderer.setSize(container.clientWidth, container.clientHeight);
-                const dpr = Math.min(window.devicePixelRatio, 2.5);
+                const dpr = Math.min(window.devicePixelRatio, 2.0);
                 renderer.setPixelRatio(dpr);
                 container.appendChild(renderer.domElement);
                 this.renderers.push(renderer);
@@ -540,26 +542,26 @@
                     return flux / (endBin - startBin + 1);
                 }
 
-                this.audio.instruments.kick.value = getBandFlux(bands.kick[0], bands.kick[1]) / 25;
-                this.audio.instruments.snare.value = getBandFlux(bands.snare[0], bands.snare[1]) / 10;
-                this.audio.instruments.hihat.value = getBandFlux(bands.hihat[0], bands.hihat[1]) / 5;
-                this.audio.instruments.bass.value = getBandFlux(bands.bass[0], bands.bass[1]) / 30;
-                this.audio.instruments.melody.value = getBandFlux(bands.melody[0], bands.melody[1]) / 20;
+                this.audio.instruments.kick.value = getBandFlux(bands.kick[0], bands.kick[1]) / 18;
+                this.audio.instruments.snare.value = getBandFlux(bands.snare[0], bands.snare[1]) / 8;
+                this.audio.instruments.hihat.value = getBandFlux(bands.hihat[0], bands.hihat[1]) / 4;
+                this.audio.instruments.bass.value = getBandFlux(bands.bass[0], bands.bass[1]) / 20;
+                this.audio.instruments.melody.value = getBandFlux(bands.melody[0], bands.melody[1]) / 15;
                 
                 const vocalEnergy = getBandFlux(bands.vocals[0], bands.vocals[1]);
                 this.audio.vad.wasActive = this.audio.vad.isActive;
-                this.audio.vad.formantConfidence = this.audio.spectral.energy < 0.1 ? Math.min(1, vocalEnergy / 15) : 0;
+                this.audio.vad.formantConfidence = this.audio.spectral.energy < 0.1 ? Math.min(1, vocalEnergy / 12) : 0;
                 this.audio.vad.isActive = this.audio.vad.formantConfidence > 0.5;
                 this.audio.instruments.vocals.value = this.audio.vad.formantConfidence;
 
                 if (this.audio.vad.isActive && !this.audio.vad.wasActive) {
                     const side = this.audio.vad.sideCounter % 2;
-                    if (side === 0) this.audio.vad.bloomPosition.set(0.15 + Math.random() * 0.2, Math.random() * 0.6 + 0.2); // Left side
-                    else this.audio.vad.bloomPosition.set(0.85 - Math.random() * 0.2, Math.random() * 0.6 + 0.2); // Right side
+                    if (side === 0) this.audio.vad.bloomPosition.set(0.15 + Math.random() * 0.2, Math.random() * 0.6 + 0.2);
+                    else this.audio.vad.bloomPosition.set(0.85 - Math.random() * 0.2, Math.random() * 0.6 + 0.2);
                     this.audio.vad.sideCounter++;
                 }
 
-                this.audio.spectral.smoothedEnergy = Math.max(this.audio.spectral.energy, this.audio.spectral.smoothedEnergy * 0.98);
+                this.audio.spectral.smoothedEnergy = Math.max(this.audio.spectral.energy, this.audio.spectral.smoothedEnergy * 0.97);
                 this.audio.spectral.energyHistory.push(this.audio.spectral.smoothedEnergy);
                 this.audio.spectral.energyHistory.shift();
                 const avgEnergy = this.audio.spectral.energyHistory.reduce((a,b) => a+b, 0) / 128;
@@ -616,7 +618,8 @@
 
                 this.updateColorPalette();
                 
-                const lerpFactor = 0.08;
+                // FIX: Smoother lerp factor
+                const lerpFactor = 0.07;
                 mesh.material.uniforms.uTime.value = t;
                 
                 if (this.audio.analyser) {
@@ -659,11 +662,36 @@
                             sceneData.camera.aspect = container.clientWidth / container.clientHeight;
                             sceneData.camera.updateProjectionMatrix();
                             sceneData.mesh.material.uniforms.uResolution.value.set(container.clientWidth, container.clientHeight);
-                            const dpr = Math.min(window.devicePixelRatio, 2.5);
+                            const dpr = Math.min(window.devicePixelRatio, 2.0);
                             renderer.setPixelRatio(dpr);
                             sceneData.mesh.material.uniforms.uDPR.value = dpr;
                         }
                         renderer.setSize(container.clientWidth, container.clientHeight);
+                    }
+                });
+            },
+
+            initUIInteractions() {
+                const uiContainer = document.getElementById('ui-container');
+                let uiHideTimeout;
+                const showUi = () => {
+                    if (uiContainer.classList.contains('ui-hidden')) {
+                         uiContainer.classList.remove('ui-hidden');
+                    }
+                    clearTimeout(uiHideTimeout);
+                    if (uiContainer.classList.contains('audio-active')) {
+                        uiHideTimeout = setTimeout(() => {
+                            uiContainer.classList.add('ui-hidden');
+                        }, 3000);
+                    }
+                };
+                window.addEventListener('mousemove', showUi);
+                window.addEventListener('dblclick', showUi);
+                let touchStartTime = 0;
+                window.addEventListener('touchstart', () => { touchStartTime = Date.now(); });
+                window.addEventListener('touchend', () => {
+                    if (Date.now() - touchStartTime > 500) {
+                        showUi();
                     }
                 });
             },
