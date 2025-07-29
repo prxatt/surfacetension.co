@@ -496,51 +496,45 @@
                                 mat3 m = mat3(0.00, 0.80, 0.60, -0.80, 0.36, -0.48, -0.60, -0.48, 0.64);
                                 f += 0.5000 * snoise(p); p = m * p * 2.02;
                                 f += 0.2500 * snoise(p); p = m * p * 2.03;
-                                f += 0.1250 * snoise(p);
-                                return f / 0.875;
+                                // Performance Optimization: Reduced FBM to 2 octaves
+                                // f += 0.1250 * snoise(p);
+                                return f / 0.75;
                             }
 
                             void main() {
                                 vec2 uv = vUv;
                                 vec2 centeredUv = uv - 0.5;
 
-                                // --- Supernova Drop Effect ---
-                                vec3 finalColor = vec3(0.0);
+                                // --- Optimized Supernova Drop Effect (Single Pass) ---
                                 float warpFactor = uDropIntensity * 0.1;
-                                for(int i = 0; i < 5; i++) {
-                                    float scale = 1.0 + float(i) * warpFactor;
-                                    vec2 sampleUv = centeredUv * scale + 0.5;
+                                vec2 warpUv = centeredUv * (1.0 + warpFactor) + 0.5;
 
-                                    float meditativeSpeed = uTime * 0.02;
-                                    float dynamicSpeed = uTime * 0.08 + uTime * uAudioEnergy * 0.15;
-                                    float baseSpeed = mix(meditativeSpeed, dynamicSpeed, uTempo);
-                                    
-                                    // --- Tone-driven shape transformation ---
-                                    float shapeMod = mix(1.0, 4.0, uTone);
-                                    
-                                    float pattern1 = fbm(vec3(sampleUv * 0.8 + uNoiseSeed, baseSpeed * 0.8));
-                                    float pattern2 = fbm(vec3(sampleUv * 1.8 * shapeMod + uNoiseSeed, baseSpeed));
-                                    float pattern3 = fbm(vec3(sampleUv * 3.5 * shapeMod + uNoiseSeed, baseSpeed * 1.5));
-                                    
-                                    float vocalBloom = smoothstep(0.0, 0.8, 1.0 - length(centeredUv)) * uAudioVocal * 0.5;
-                                    
-                                    // --- Refined Beat Ripples ---
-                                    float kickRipple = 1.0 - smoothstep(0.0, 0.6, length(centeredUv)) * uKick * 0.8;
-                                    float snareRipple = 1.0 - smoothstep(0.1, 0.3, length(centeredUv)) * uSnare * 0.5;
-                                    float finalPattern = (pattern1 * 0.6 + pattern2 * 0.3 + pattern3 * 0.1) * kickRipple * snareRipple;
+                                float meditativeSpeed = uTime * 0.02;
+                                float dynamicSpeed = uTime * 0.08 + uTime * uAudioEnergy * 0.15;
+                                float baseSpeed = mix(meditativeSpeed, dynamicSpeed, uTempo);
+                                
+                                // --- Tone-driven shape transformation ---
+                                float shapeMod = mix(1.0, 4.0, uTone);
+                                
+                                float pattern1 = fbm(vec3(warpUv * 0.8 + uNoiseSeed, baseSpeed * 0.8));
+                                float pattern2 = fbm(vec3(warpUv * 1.8 * shapeMod + uNoiseSeed, baseSpeed));
+                                float pattern3 = fbm(vec3(warpUv * 3.5 * shapeMod + uNoiseSeed, baseSpeed * 1.5));
+                                
+                                float vocalBloom = smoothstep(0.0, 0.8, 1.0 - length(centeredUv)) * uAudioVocal * 0.5;
+                                
+                                // --- Refined Beat Ripples ---
+                                float kickRipple = 1.0 - smoothstep(0.0, 0.6, length(centeredUv)) * uKick * 0.8;
+                                float snareRipple = 1.0 - smoothstep(0.1, 0.3, length(centeredUv)) * uSnare * 0.5;
+                                float finalPattern = (pattern1 * 0.6 + pattern2 * 0.3 + pattern3 * 0.1) * kickRipple * snareRipple;
 
-                                    vec3 color = mix(uColor1, uColor2, smoothstep(-0.2, 0.2, finalPattern));
-                                    color = mix(color, uColor3, smoothstep(0.4, 0.6, pattern3));
-                                    color += vocalBloom * uColor3;
-
-                                    finalColor += color;
-                                }
-                                finalColor /= 5.0;
+                                vec3 color = mix(uColor1, uColor2, smoothstep(-0.2, 0.2, finalPattern));
+                                color = mix(color, uColor3, smoothstep(0.4, 0.6, pattern3));
+                                color += vocalBloom * uColor3;
 
                                 // --- Final Polish ---
                                 float vignette = 1.0 - length(centeredUv * 1.0);
                                 float finalIntensity = 0.6 + uAudioEnergy * 1.2 + uDropIntensity * 2.0;
-                                finalColor = finalColor * vignette * finalIntensity;
+                                vec3 finalColor = color * vignette * finalIntensity;
                                 
                                 // --- Iridescent Rainbow Glow on Drop ---
                                 float rainbowDist = length(centeredUv + snoise(vec3(uv * 2.0, uTime * 0.1)) * 0.1 * uDropIntensity);
