@@ -247,7 +247,7 @@
             clock: null,
             lastRandomizationTime: 0,
             idleNoiseMix: { value: 0 },
-            wakeLock: null, // FIX: For preventing screen sleep
+            wakeLock: null,
 
             audio: {
                 context: null,
@@ -351,7 +351,7 @@
                         uColor2: { value: new THREE.Color(0x000000) },
                         uColor3: { value: new THREE.Color(0x000000) },
                         uVignette: { value: 0.3 },
-                        uFilmGrain: { value: 0.03 },
+                        uFilmGrain: { value: 0.02 },
                         uComplexity: { value: 0.5 },
                         uDPR: { value: 1.0 },
                     },
@@ -456,12 +456,10 @@
                         el.classList.remove('content-hidden');
                     });
                     this.initUIInteractions();
-                    // FIX: Add visibility change listener for Wake Lock
                     document.addEventListener('visibilitychange', () => this.handleVisibilityChange());
                 } catch (error) { this.handleFatalError(error); }
             },
 
-            // FIX: New function to handle Wake Lock
             async requestWakeLock() {
                 if ('wakeLock' in navigator) {
                     try {
@@ -472,7 +470,7 @@
                         });
                         console.log('Wake Lock is active');
                     } catch (err) {
-                        console.error(`${err.name}, ${err.message}`);
+                        console.error(`Wake Lock failed: ${err.name}, ${err.message}`);
                     }
                 }
             },
@@ -503,7 +501,6 @@
                         document.getElementById('ui-container').classList.add('audio-active');
                         setTimeout(() => document.getElementById('ui-container').classList.add('ui-hidden'), 2000);
                         
-                        // FIX: Request wake lock when audio is enabled
                         this.requestWakeLock();
 
                     } catch (err) {
@@ -716,9 +713,8 @@
                 });
             },
             
-            // FIX: New function to handle visibility changes for Wake Lock
             handleVisibilityChange() {
-                if (this.wakeLock !== null && document.visibilityState === 'visible') {
+                if (this.audio.context && this.wakeLock === null && document.visibilityState === 'visible') {
                     this.requestWakeLock();
                 }
             },
