@@ -44,14 +44,17 @@
             background-color: #000000; /* Pure black for maximum contrast */
             color: white;
             font-family: 'Inter', sans-serif;
+            /* UX Refinement: Disable text selection for a cleaner experience */
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
 
         /* --- Optimization: Smooth Fade-in --- */
-        /* Start with elements invisible */
         .content-hidden {
             opacity: 0;
         }
-        /* Fade-in animation for a smoother load */
         .content-visible {
             opacity: 1;
             transition: opacity 1.5s ease-in;
@@ -73,12 +76,12 @@
             justify-content: center;
             align-items: center;
             z-index: 3;
-            pointer-events: none; /* Allows mouse events to pass through to the canvas */
+            pointer-events: none;
         }
 
         h1 {
             font-family: "ivypresto-display", serif;
-            font-weight: 300; /* Lighter weight for elegance */
+            font-weight: 300;
             font-style: normal;
             font-size: clamp(3rem, 12vw, 10rem);
             color: rgba(255, 255, 255, 0.9);
@@ -88,18 +91,63 @@
         }
 
         /* --- UI Elements --- */
-        #social-links-container {
+        #ui-container {
             position: fixed;
-            bottom: 2rem;
+            /* UI Refinement: Position UI lower on the screen */
+            bottom: 1rem;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 3rem;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            z-index: 100;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        /* UI Refinement: Hide UI during audio playback for immersion */
+        #ui-container.ui-hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #audio-button {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.7);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        #audio-button:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+        #audio-button.active {
+            background-color: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+
+        #social-links-container {
+            display: flex;
+            gap: 2.5rem; /* UI Refinement: Slightly adjusted gap */
             align-items: center;
             justify-content: center;
-            z-index: 100;
-            padding-bottom: 4rem;
+            padding-bottom: 2rem; /* UI Refinement: Adjusted padding */
+            transition: transform 0.5s ease-in-out;
         }
+
+        /* UI Refinement: Icons shrink when audio is active */
+        #ui-container.audio-active #social-links-container {
+            transform: scale(0.9);
+        }
+
         #social-links-container a {
             color: rgba(255, 255, 255, 0.4);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -107,8 +155,9 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            padding: 8px;
+            padding: 12px; /* UI Refinement: Adjusted padding */
             pointer-events: auto;
+            will-change: transform;
         }
         #social-links-container a::before {
             content: '';
@@ -137,8 +186,9 @@
         #social-links-container a:nth-child(3):hover { color: #00f2ea; }
         #social-links-container a:nth-child(4):hover { color: #1877F2; }
         #social-links-container svg {
-            width: 20px;
-            height: 20px;
+            /* UI Refinement: Smaller icon size */
+            width: 18px;
+            height: 18px;
             stroke-width: 1.5;
             filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4));
         }
@@ -179,9 +229,8 @@
 
         @media (max-width: 768px) {
             #social-links-container { 
-                gap: 2rem; 
-                bottom: 1rem; 
-                padding-bottom: 4.5rem; 
+                gap: 1.5rem;
+                padding-bottom: 2rem;
             }
              #footer-elements { 
                 flex-direction: column; 
@@ -193,17 +242,19 @@
     </style>
 </head>
 <body>
-    <!-- Start with content hidden, make visible with JS -->
     <div id="vfx-canvas-container" class="content-hidden"></div>
     <div id="text-container" class="content-hidden">
         <h1>SURFACE TENSION</h1>
     </div>
 
-    <div id="social-links-container" class="content-hidden">
-        <a href="https://www.instagram.com/surfacetension.co" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.85s-.011 3.584-.069 4.85c-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07s-3.584-.012-4.85-.07c-3.252-.148-4.771-1.691-4.919-4.919-.058-1.265-.07-1.645-.07-4.85s.012-3.584.07-4.85c.148-3.225 1.664-4.771 4.919-4.919C8.416 2.175 8.796 2.163 12 2.163zm0 1.802c-3.143 0-3.505.012-4.73.068-2.693.123-3.995 1.424-4.118 4.118-.056 1.225-.068 1.586-.068 4.73s.012 3.505.068 4.73c.123 2.693 1.424 3.995 4.118 4.118 1.225.056 1.586.068 4.73.068s3.505-.012 4.73-.068c2.693-.123 3.995-1.424 4.118-4.118.056-1.225.068-1.586.068-4.73s-.012-3.505-.068-4.73c-.123-2.693-1.424-3.995-4.118-4.118-1.225-.056-1.586-.068-4.73-.068zm0 3.888c-2.402 0-4.35 1.948-4.35 4.35s1.948 4.35 4.35 4.35 4.35-1.948 4.35-4.35-1.948-4.35-4.35-4.35zm0 7.167c-1.553 0-2.817-1.264-2.817-2.817s1.264-2.817 2.817-2.817 2.817 1.264 2.817 2.817-1.264 2.817-2.817 2.817zm4.965-7.332c-.608 0-1.1.492-1.1 1.1s.492 1.1 1.1 1.1 1.1-.492 1.1-1.1-.492-1.1-1.1-1.1z"></path></svg></a>
-        <a href="https://www.twitter.com/surfacetensi_n" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg></a>
-        <a href="https://www.tiktok.com/@surfacetension.co" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg></a>
-        <a href="https://www.facebook.com/profile.php?id=61577915426183" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+    <div id="ui-container" class="content-hidden">
+        <button id="audio-button">Enable Audio</button>
+        <div id="social-links-container">
+            <a href="https://www.instagram.com/surfacetension.co" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.85s-.011 3.584-.069 4.85c-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07s-3.584-.012-4.85-.07c-3.252-.148-4.771-1.691-4.919-4.919-.058-1.265-.07-1.645-.07-4.85s.012-3.584.07-4.85c.148-3.225 1.664-4.771 4.919-4.919C8.416 2.175 8.796 2.163 12 2.163zm0 1.802c-3.143 0-3.505.012-4.73.068-2.693.123-3.995 1.424-4.118 4.118-.056 1.225-.068 1.586-.068 4.73s.012 3.505.068 4.73c.123 2.693 1.424 3.995 4.118 4.118 1.225.056 1.586.068 4.73.068s3.505-.012 4.73-.068c2.693-.123 3.995-1.424 4.118-4.118.056-1.225.068-1.586.068-4.73s-.012-3.505-.068-4.73c-.123-2.693-1.424-3.995-4.118-4.118-1.225-.056-1.586-.068-4.73-.068zm0 3.888c-2.402 0-4.35 1.948-4.35 4.35s1.948 4.35 4.35 4.35 4.35-1.948 4.35-4.35-1.948-4.35-4.35-4.35zm0 7.167c-1.553 0-2.817-1.264-2.817-2.817s1.264-2.817 2.817-2.817 2.817 1.264 2.817 2.817-1.264 2.817-2.817 2.817zm4.965-7.332c-.608 0-1.1.492-1.1 1.1s.492 1.1 1.1 1.1 1.1-.492 1.1-1.1-.492-1.1-1.1-1.1z"></path></svg></a>
+            <a href="https://www.twitter.com/surfacetensi_n" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg></a>
+            <a href="https://www.tiktok.com/@surfacetension.co" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg></a>
+            <a href="https://www.facebook.com/profile.php?id=61577915426183" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+        </div>
     </div>
 
     <div id="footer-elements" class="content-hidden">
@@ -211,55 +262,44 @@
         <div id="rights-text">All Rights Reserved</div>
     </div>
 
-    <!-- Optimization: Load scripts last and defer them -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js" defer></script>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- CINEMATIC ATMOSPHERE VFX ENGINE ---
         const CinematicEngine = {
             scenes: {},
             renderers: [],
-            lastPaletteChange: 0,
-            paletteChangeInterval: 15000, // Change colors every 15 seconds
-
-            // Simplified variation system for performance
-            InfiniteVariationSystem: class {
-                constructor() {
-                    this.noiseSeeds = []; this.intensityWaves = [];
-                    for(let i = 0; i < 5; i++) {
-                        this.noiseSeeds.push({ evolution: 0.03 + Math.random() * 0.04, cycle: 30000 + Math.random() * 20000 });
-                        this.intensityWaves.push({ frequency: 0.2 + Math.random() * 0.3, amplitude: 0.4 + Math.random() * 0.4, offset: Math.random() * Math.PI * 2, cycle: 35000 + Math.random() * 15000 });
-                    }
-                    this.lastRegenerationTime = 0; this.regenerationInterval = 90000;
-                }
-                update(time) {
-                    if(time - this.lastRegenerationTime > this.regenerationInterval) { this.evolveParameters(); this.lastRegenerationTime = time; }
-                    return { 
-                        noise: this.calculateNoiseVariations(time), 
-                        intensity: this.calculateIntensityVariations(time) 
-                    };
-                }
-                calculateNoiseVariations(time) {
-                    const activeNoise = this.noiseSeeds[Math.floor(time / 15000) % this.noiseSeeds.length], nextNoise = this.noiseSeeds[(Math.floor(time / 15000) + 1) % this.noiseSeeds.length], blend = (time % 15000) / 15000;
-                    return { evolution: activeNoise.evolution + (nextNoise.evolution - activeNoise.evolution) * blend };
-                }
-                calculateIntensityVariations(time) {
-                    let combinedIntensity = 1.0;
-                    this.intensityWaves.forEach((wave) => { const cycle = Math.sin(time * wave.frequency * 0.001 + wave.offset); combinedIntensity += cycle * wave.amplitude * 0.2; });
-                    return Math.max(0.5, Math.min(1.5, combinedIntensity));
-                }
-                evolveParameters() {
-                    this.noiseSeeds.forEach(seed => {
-                        seed.evolution += (Math.random() - 0.5) * 0.01;
-                        seed.evolution = Math.max(0.02, Math.min(0.08, seed.evolution));
-                    });
-                    this.intensityWaves.forEach(wave => {
-                        wave.frequency += (Math.random() - 0.5) * 0.05;
-                        wave.frequency = Math.max(0.1, Math.min(0.5, wave.frequency));
-                    });
-                }
+            audio: {
+                analyser: null,
+                dataArray: null,
+                lastDataArray: null, // For spectral flux
+                // --- Advanced Smoothing & Analysis ---
+                smoothedEnergy: 0,
+                smoothedTone: 0.5,
+                smoothedVocal: 0,
+                // --- Refined Beat Detection ---
+                flux: { bass: 0, mid: 0, high: 0 },
+                smoothedFlux: { bass: 0, mid: 0, high: 0 },
+                // --- Chorus/Drop Detection ---
+                energyHistory: new Array(128).fill(0),
+                dropThreshold: 1.5,
+                lastDropTime: 0,
+                // --- BPM & Archetype Detection ---
+                beatTimes: [],
+                bpm: 120,
+                beatRegularity: 0,
+                archetype: 0.5, // 0: Ambient, 0.5: Textured, 1: Rhythmic
+                // --- Silence Detection ---
+                silenceCounter: 0,
+                silenceThreshold: 150, // Increased for better song end detection
+            },
+            color: {
+                currentPalette: {},
+                lastTone: 0.5,
+                toneChangeThreshold: 0.05,
+                lastPaletteChange: 0,
+                paletteChangeInterval: 15000,
             },
 
             getSimplexNoiseShader() {
@@ -291,6 +331,44 @@
                 `;
             },
 
+            initAudio() {
+                const audioButton = document.getElementById('audio-button');
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    audioButton.textContent = "Audio API not supported";
+                    return;
+                }
+
+                audioButton.addEventListener('click', async () => {
+                    if (this.audio.analyser) return;
+
+                    try {
+                        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                        const source = audioContext.createMediaStreamSource(stream);
+                        this.audio.analyser = audioContext.createAnalyser();
+                        this.audio.analyser.fftSize = 1024;
+                        this.audio.analyser.smoothingTimeConstant = 0.8;
+                        source.connect(this.audio.analyser);
+                        
+                        const bufferLength = this.audio.analyser.frequencyBinCount;
+                        this.audio.dataArray = new Uint8Array(bufferLength);
+                        this.audio.lastDataArray = new Uint8Array(bufferLength);
+
+                        audioButton.textContent = "Audio Enabled";
+                        audioButton.classList.add('active');
+                        
+                        // UI Refinement: Hide UI after a delay for immersion
+                        const uiContainer = document.getElementById('ui-container');
+                        uiContainer.classList.add('audio-active');
+                        setTimeout(() => uiContainer.classList.add('ui-hidden'), 2000);
+
+                    } catch (err) {
+                        console.error("Error accessing microphone:", err);
+                        audioButton.textContent = "Audio Denied";
+                    }
+                });
+            },
+
             createScene(id, options) {
                 const container = document.getElementById(id);
                 if (!container) return;
@@ -316,16 +394,13 @@
                     scene.add(mesh);
 
                     const clock = new THREE.Clock();
-                    const variationSystem = new this.InfiniteVariationSystem();
                     
                     const animate = () => {
                         requestAnimationFrame(animate);
                         const t = clock.getElapsedTime();
-                        const pNow = performance.now();
-                        const variations = variationSystem.update(pNow);
                         
                         if (options.update) {
-                            options.update({ t, main: mesh, variations, pNow });
+                            options.update({ t, main: mesh });
                         }
                         
                         renderer.render(scene, camera);
@@ -336,25 +411,32 @@
 
                 } catch (e) {
                     console.error(`Error creating VFX scene "${id}":`, e);
-                    throw e; // Propagate error to main handler
+                    throw e;
                 }
             },
             
             initCinematicAtmosphere() {
                 const geometry = new THREE.PlaneGeometry(20, 12, 1, 1);
 
-                const transitionToRandomColors = (mesh) => {
-                    const newColor1 = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
-                    const newColor2 = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
-                    const newColor3 = new THREE.Color().setHSL(Math.random(), 0.8, 0.6);
-                    
-                    const duration = 15;
-                    gsap.to(mesh.material.uniforms.uColor1.value, { r: newColor1.r, g: newColor1.g, b: newColor1.b, duration: duration, ease: "sine.inOut" });
-                    gsap.to(mesh.material.uniforms.uColor2.value, { r: newColor2.r, g: newColor2.g, b: newColor2.b, duration: duration, ease: "sine.inOut" });
-                    gsap.to(mesh.material.uniforms.uColor3.value, { r: newColor3.r, g: newColor3.g, b: newColor3.b, duration: duration, ease: "sine.inOut" });
-                    
-                    this.lastPaletteChange = performance.now();
+                const generatePaletteFromTone = (tone) => {
+                    const baseHue = 0.6 - (tone * 0.6); 
+                    const palette = {
+                        color1: new THREE.Color().setHSL(baseHue, 0.6, 0.1),
+                        color2: new THREE.Color().setHSL((baseHue + 0.1) % 1.0, 0.7, 0.4),
+                        color3: new THREE.Color().setHSL((baseHue + 0.5) % 1.0, 0.8, 0.6)
+                    };
+                    return palette;
                 };
+                
+                const transitionToPalette = (mesh, newPalette) => {
+                    const duration = 12; 
+                    gsap.to(mesh.material.uniforms.uColor1.value, { r: newPalette.color1.r, g: newPalette.color1.g, b: newPalette.color1.b, duration: duration, ease: "sine.inOut" });
+                    gsap.to(mesh.material.uniforms.uColor2.value, { r: newPalette.color2.r, g: newPalette.color2.g, b: newPalette.color2.b, duration: duration, ease: "sine.inOut" });
+                    gsap.to(mesh.material.uniforms.uColor3.value, { r: newPalette.color3.r, g: newPalette.color3.g, b: newPalette.color3.b, duration: duration, ease: "sine.inOut" });
+                    this.color.currentPalette = newPalette;
+                };
+
+                this.color.currentPalette = generatePaletteFromTone(0.5);
 
                 this.createScene('vfx-canvas-container', {
                     cameraZ: 5,
@@ -363,11 +445,19 @@
                         uniforms: { 
                             uTime: { value: 0 }, 
                             uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-                            uIntensity: { value: 1.0 },
-                            uNoiseEvolution: { value: 0.1 },
-                            uColor1: { value: new THREE.Color().setHSL(Math.random(), 0.7, 0.5) },
-                            uColor2: { value: new THREE.Color().setHSL(Math.random(), 0.7, 0.5) },
-                            uColor3: { value: new THREE.Color().setHSL(Math.random(), 0.8, 0.6) },
+                            uAudioEnergy: { value: 0.0 },
+                            uAudioVocal: { value: 0.0 },
+                            uDropIntensity: { value: 0.0 },
+                            uTempo: { value: 0.5 },
+                            uTone: { value: 0.5 },
+                            uNoiseSeed: { value: Math.random() * 1000 },
+                            uColor1: { value: this.color.currentPalette.color1 },
+                            uColor2: { value: this.color.currentPalette.color2 },
+                            uColor3: { value: this.color.currentPalette.color3 },
+                            // --- New uniforms for refined beat detection ---
+                            uKick: { value: 0.0 },
+                            uSnare: { value: 0.0 },
+                            uHiHat: { value: 0.0 },
                         },
                         vertexShader: `
                             varying vec2 vUv;
@@ -381,13 +471,26 @@
 
                             varying vec2 vUv;
                             uniform float uTime;
-                            uniform float uIntensity;
-                            uniform float uNoiseEvolution;
+                            uniform float uAudioEnergy;
+                            uniform float uAudioVocal;
+                            uniform float uDropIntensity;
+                            uniform float uTempo;
+                            uniform float uTone;
+                            uniform float uNoiseSeed;
                             uniform vec3 uColor1;
                             uniform vec3 uColor2;
                             uniform vec3 uColor3;
+                            uniform float uKick;
+                            uniform float uSnare;
+                            uniform float uHiHat;
 
-                            // --- Heavily Optimized FBM function (3 octaves) ---
+                            // Function to convert HSV to RGB
+                            vec3 hsv2rgb(vec3 c) {
+                                vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+                                vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+                                return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+                            }
+
                             float fbm(vec3 p) {
                                 float f = 0.0;
                                 mat3 m = mat3(0.00, 0.80, 0.60, -0.80, 0.36, -0.48, -0.60, -0.48, 0.64);
@@ -399,42 +502,150 @@
 
                             void main() {
                                 vec2 uv = vUv;
-                                float time = uTime * uNoiseEvolution; 
+                                vec2 centeredUv = uv - 0.5;
+
+                                // --- Supernova Drop Effect ---
+                                vec3 finalColor = vec3(0.0);
+                                float warpFactor = uDropIntensity * 0.1;
+                                for(int i = 0; i < 5; i++) {
+                                    float scale = 1.0 + float(i) * warpFactor;
+                                    vec2 sampleUv = centeredUv * scale + 0.5;
+
+                                    float meditativeSpeed = uTime * 0.02;
+                                    float dynamicSpeed = uTime * 0.08 + uTime * uAudioEnergy * 0.15;
+                                    float baseSpeed = mix(meditativeSpeed, dynamicSpeed, uTempo);
+                                    
+                                    // --- Tone-driven shape transformation ---
+                                    float shapeMod = mix(1.0, 4.0, uTone);
+                                    
+                                    float pattern1 = fbm(vec3(sampleUv * 0.8 + uNoiseSeed, baseSpeed * 0.8));
+                                    float pattern2 = fbm(vec3(sampleUv * 1.8 * shapeMod + uNoiseSeed, baseSpeed));
+                                    float pattern3 = fbm(vec3(sampleUv * 3.5 * shapeMod + uNoiseSeed, baseSpeed * 1.5));
+                                    
+                                    float vocalBloom = smoothstep(0.0, 0.8, 1.0 - length(centeredUv)) * uAudioVocal * 0.5;
+                                    
+                                    // --- Refined Beat Ripples ---
+                                    float kickRipple = 1.0 - smoothstep(0.0, 0.6, length(centeredUv)) * uKick * 0.8;
+                                    float snareRipple = 1.0 - smoothstep(0.1, 0.3, length(centeredUv)) * uSnare * 0.5;
+                                    float finalPattern = (pattern1 * 0.6 + pattern2 * 0.3 + pattern3 * 0.1) * kickRipple * snareRipple;
+
+                                    vec3 color = mix(uColor1, uColor2, smoothstep(-0.2, 0.2, finalPattern));
+                                    color = mix(color, uColor3, smoothstep(0.4, 0.6, pattern3));
+                                    color += vocalBloom * uColor3;
+
+                                    finalColor += color;
+                                }
+                                finalColor /= 5.0;
+
+                                // --- Final Polish ---
+                                float vignette = 1.0 - length(centeredUv * 1.0);
+                                float finalIntensity = 0.6 + uAudioEnergy * 1.2 + uDropIntensity * 2.0;
+                                finalColor = finalColor * vignette * finalIntensity;
                                 
-                                // --- Optimized layering for depth without expensive flow field ---
-                                // We animate the texture coordinates directly at different speeds for parallax
-                                float pattern1 = fbm(vec3(uv * 1.0 + time * 0.05, time * 0.2)); // Slow, deep background
-                                float pattern2 = fbm(vec3(uv * 2.5 + time * 0.1, time * 0.3));  // Mid-ground
-                                float pattern3 = fbm(vec3(uv * 4.0 + time * 0.2, time * 0.5));  // Fast foreground
+                                // --- Iridescent Rainbow Glow on Drop ---
+                                float rainbowDist = length(centeredUv + snoise(vec3(uv * 2.0, uTime * 0.1)) * 0.1 * uDropIntensity);
+                                vec3 rainbowColor = hsv2rgb(vec3(rainbowDist * 2.0 - uTime * 0.2, 0.8, 1.0));
+                                finalColor += uDropIntensity * rainbowColor * (1.0 - smoothstep(0.0, 0.5, rainbowDist)) * 0.5;
 
-                                // Combine patterns for a rich texture
-                                float combinedPattern = pattern1 * 0.5 + pattern2 * 0.3 + pattern3 * 0.2;
-                                float sharpPattern = smoothstep(0.4, 0.6, pattern3); // Use the detailed foreground for highlights
+                                // --- Hi-hat sparkles ---
+                                finalColor += snoise(vec3(uv * 200.0, uTime * 10.0)) * uHiHat * 0.5;
 
-                                // Dynamic color mixing
-                                vec3 color = mix(uColor1, uColor2, smoothstep(-0.2, 0.2, combinedPattern));
-                                color = mix(color, uColor3, sharpPattern);
-
-                                // Atmosphere
-                                float vignette = 1.0 - length((uv - 0.5) * 1.0);
-                                vignette = smoothstep(0.0, 0.8, vignette);
-                                // Reduced grain frequency for better performance
-                                float grain = (snoise(vec3(uv * 400.0, uTime * 5.0)) * 0.5 + 0.5) * 0.03;
-
-                                // Final composition
-                                color = color * vignette * uIntensity + grain;
+                                finalColor += (snoise(vec3(uv * 800.0, uTime * 2.0)) * 0.5 + 0.5) * 0.02;
                                 
-                                gl_FragColor = vec4(color, 1.0);
+                                gl_FragColor = vec4(finalColor, 1.0);
                             }`
                     },
-                    update: ({ t, main, variations, pNow }) => {
-                        main.material.uniforms.uTime.value = t;
-                        main.material.uniforms.uIntensity.value = variations.intensity;
-                        main.material.uniforms.uNoiseEvolution.value = variations.noise.evolution;
+                    update: ({ t, main }) => {
+                        const pNow = performance.now();
+                        
+                        if (this.audio.analyser) {
+                            this.audio.analyser.getByteFrequencyData(this.audio.dataArray);
+                            const bufferLength = this.audio.analyser.frequencyBinCount;
+                            
+                            let energy = 0, vocals = 0;
+                            let spectralCentroid = 0, spectralSum = 0;
+                            const bassBins = Math.floor(bufferLength * 0.1);
+                            const vocalBins = Math.floor(bufferLength * 0.4);
+                            const midBins = Math.floor(bufferLength * 0.6);
 
-                        if (pNow - this.lastPaletteChange > this.paletteChangeInterval) {
-                           transitionToRandomColors(main);
+                            // --- Spectral Flux Calculation ---
+                            this.audio.flux = { bass: 0, mid: 0, high: 0 };
+                            for (let i = 0; i < bufferLength; i++) {
+                                const currentVal = this.audio.dataArray[i];
+                                const lastVal = this.audio.lastDataArray[i];
+                                const flux = Math.max(0, currentVal - lastVal);
+                                if (i < bassBins) this.audio.flux.bass += flux;
+                                else if (i < midBins) this.audio.flux.mid += flux;
+                                else this.audio.flux.high += flux;
+
+                                const val = Math.pow(currentVal / 255, 2);
+                                energy += val;
+                                if (i >= bassBins && i < vocalBins) vocals += val;
+                                spectralCentroid += i * val;
+                                spectralSum += val;
+                            }
+                            this.audio.lastDataArray.set(this.audio.dataArray);
+                            
+                            energy = Math.sqrt(energy / bufferLength);
+                            if (spectralSum > 0) spectralCentroid /= spectralSum;
+
+                            // --- Silence Detection for Song Changes ---
+                            if (energy < 0.005) {
+                                this.audio.silenceCounter++;
+                            } else {
+                                this.audio.silenceCounter = 0;
+                            }
+                            if (this.audio.silenceCounter > this.audio.silenceThreshold) {
+                                main.material.uniforms.uNoiseSeed.value = Math.random() * 1000;
+                                this.audio.silenceCounter = 0;
+                            }
+                            
+                            this.audio.smoothedEnergy = Math.max(energy, this.audio.smoothedEnergy * 0.98);
+                            this.audio.smoothedTone = (spectralCentroid / bufferLength) * 0.05 + this.audio.smoothedTone * 0.95;
+                            this.audio.smoothedVocal = Math.max(Math.sqrt(vocals / (vocalBins-bassBins)), this.audio.smoothedVocal * 0.96);
+                            
+                            // --- Refined Beat Detection using Flux ---
+                            this.audio.smoothedFlux.bass = Math.max(this.audio.flux.bass / (bassBins * 255), this.audio.smoothedFlux.bass * 0.92);
+                            this.audio.smoothedFlux.mid = Math.max(this.audio.flux.mid / ((midBins - bassBins) * 255), this.audio.smoothedFlux.mid * 0.90);
+                            this.audio.smoothedFlux.high = Math.max(this.audio.flux.high / ((bufferLength - midBins) * 255), this.audio.smoothedFlux.high * 0.88);
+
+                            // --- Chorus/Drop Detection ---
+                            this.audio.energyHistory.push(this.audio.smoothedEnergy);
+                            this.audio.energyHistory.shift();
+                            const avgEnergy = this.audio.energyHistory.reduce((a, b) => a + b, 0) / this.audio.energyHistory.length;
+                            if (this.audio.smoothedEnergy > avgEnergy * this.audio.dropThreshold && t > this.audio.lastDropTime + 2.0) {
+                                main.material.uniforms.uDropIntensity.value = 1.0;
+                                this.audio.lastDropTime = t;
+                            }
+                            main.material.uniforms.uDropIntensity.value *= 0.96;
+                            
+                            const tempoRatio = Math.min(1.0, Math.max(0, (this.audio.bpm - 110) / (120 - 110)));
+                            main.material.uniforms.uTempo.value = main.material.uniforms.uTempo.value * 0.95 + tempoRatio * 0.05;
+
+                            // Update Shader Uniforms
+                            main.material.uniforms.uAudioEnergy.value = this.audio.smoothedEnergy;
+                            main.material.uniforms.uAudioVocal.value = this.audio.smoothedVocal;
+                            main.material.uniforms.uTone.value = this.audio.smoothedTone;
+                            main.material.uniforms.uKick.value = this.audio.smoothedFlux.bass;
+                            main.material.uniforms.uSnare.value = this.audio.smoothedFlux.mid;
+                            main.material.uniforms.uHiHat.value = this.audio.smoothedFlux.high;
+
+                            // Continuously check for tone shifts to change colors
+                            if (Math.abs(this.audio.smoothedTone - this.color.lastTone) > this.color.toneChangeThreshold) {
+                                const newPalette = generatePaletteFromTone(this.audio.smoothedTone);
+                                transitionToPalette(main, newPalette);
+                                this.color.lastTone = this.audio.smoothedTone;
+                            }
+                        } else {
+                            // --- Non-Audio Mode: Timed Color Cycling ---
+                            if (pNow - this.color.lastPaletteChange > this.color.paletteChangeInterval) {
+                                const newPalette = generatePaletteFromTone(Math.random());
+                                transitionToPalette(main, newPalette);
+                                this.color.lastPaletteChange = pNow;
+                            }
                         }
+
+                        main.material.uniforms.uTime.value = t;
                     }
                 });
             },
@@ -457,21 +668,38 @@
             }
         };
 
-        // --- ROBUST INITIALIZATION ---
         try {
             if (!window.THREE) {
                 throw new Error("Three.js library failed to load.");
             }
-            console.log("WebGL is supported. Initializing Cinematic Engine...");
+            CinematicEngine.initAudio();
             CinematicEngine.initCinematicAtmosphere();
             window.addEventListener('resize', () => CinematicEngine.handleResize());
-            console.log("Cinematic Engine initialized successfully.");
 
-            // --- Optimization: Fade in content now that scripts are running ---
             document.querySelectorAll('.content-hidden').forEach(el => {
                 el.classList.add('content-visible');
                 el.classList.remove('content-hidden');
             });
+            
+            // --- UI Hide/Show Logic ---
+            const uiContainer = document.getElementById('ui-container');
+            let uiHideTimeout;
+            const showUi = () => {
+                uiContainer.classList.remove('ui-hidden');
+                clearTimeout(uiHideTimeout);
+                if (uiContainer.classList.contains('audio-active')) {
+                    uiHideTimeout = setTimeout(() => uiContainer.classList.add('ui-hidden'), 2500);
+                }
+            };
+            window.addEventListener('mousemove', showUi);
+            window.addEventListener('dblclick', showUi);
+            
+            let touchStartTime = 0;
+            window.addEventListener('touchstart', () => { touchStartTime = Date.now(); });
+            window.addEventListener('touchend', () => {
+                if (Date.now() - touchStartTime > 500) showUi(); // Long press
+            });
+
 
         } catch (error) {
             console.error("A fatal error occurred during page initialization:", error);
@@ -482,10 +710,75 @@
                     <p style="margin-top: 1em;">The background animation could not be started. Please check the browser console (F12) for more details.</p>
                     <pre style="text-align: left; display: inline-block; margin-top: 1.5em; padding: 1em; background: rgba(0,0,0,0.3); border: 1px solid #555; border-radius: 5px; max-width: 90%; overflow-wrap: break-word; white-space: pre-wrap;">${error.stack || error.message}</pre>
                 </div>`;
-            const textContainer = document.getElementById('text-container');
-            if(textContainer) textContainer.style.display = 'none';
+            document.getElementById('ui-container').style.display = 'none';
         }
     });
     </script>
+
+    <!-- 
+    =====================================================================
+    == DEVELOPER NOTES FOR FUTURE AI-ASSISTED DEVELOPMENT ==
+    =====================================================================
+
+    **Project Vision:**
+    The goal of this project is to be the "best ever" web-based music visualizer. 
+    It is not just a technical utility, but an artistic, cinematic, and luxurious 
+    experience. The visuals should feel like they are being conducted by the music, 
+    creating a unique, abstract painting for every song. The brand identity is 
+    premium, artistic, and technologically sophisticated.
+
+    **Core Architectural Concepts:**
+
+    1.  **Simulated Musical Intelligence:**
+        - We do not use a true ML model, but we simulate its effects through advanced 
+          real-time audio analysis in the `update` function of the `CinematicEngine`.
+        - **BPM Detection:** We estimate tempo to switch between a slow, "Meditative" 
+          mode and a faster, "Dynamic" mode. This is the primary driver of the 
+          visual's energy level.
+        - **Tonal Analysis (Spectral Centroid):** We determine if the music is bass-heavy 
+          or treble-heavy. This continuously drives the color palette generation and 
+          influences the texture/shape of the noise patterns in the shader.
+        - **Transient Detection (Spectral Flux):** We now analyze the rate of change in 
+          frequency bins to detect sharp percussive hits. This allows us to differentiate
+          between bass (kick), mid (snare), and high (hi-hat) transients for more
+          nuanced and instrument-specific reactions in the shader.
+        - **Drop/Chorus Detection:** We maintain a running history of the song's energy. 
+          A sudden spike above this average triggers the "Supernova" climax effect.
+
+    2.  **The Shader (fragmentShader):**
+        - This is the artistic heart of the project. It's written in GLSL.
+        - **Painterly Motion:** It uses multiple layers of Fractal Brownian Motion (fbm) 
+          with Simplex Noise (snoise) to create the fluid, organic patterns.
+        - **Tempo-Adaptive Speed:** The `uTempo` uniform controls the base speed of the 
+          animation, creating two distinct moods.
+        - **Tone-Driven Shapes:** The `uTone` uniform modifies the frequency of the noise 
+          layers (`shapeMod`), making the visuals softer for bass and sharper for treble.
+        - **Vocal Heartbeat:** The `uAudioVocal` uniform drives a central bloom, giving 
+          vocals a visual presence.
+        - **Supernova Climax:** The `uDropIntensity` uniform drives a multi-sample radial 
+          blur ("warp speed") and a vibrant, iridescent rainbow glow with a dynamic,
+          noise-driven shape.
+
+    3.  **Color System:**
+        - Colors are generated in real-time based on the `smoothedTone` of the music.
+        - Palettes are not fixed. They are created algorithmically using HSL color space 
+          to ensure harmonic, aesthetically pleasing combinations that evolve with the song.
+        - Transitions are handled by GSAP for smooth, cinematic crossfades.
+        - **Crucially, when audio is not enabled, the system reverts to a timed, random 
+          palette-switching mode to ensure a perpetually interesting visual.**
+
+    **Future AI Improvement Directives:**
+    - **Expand Genre Recognition:** While the current archetype system (based on BPM, tone, etc.) is effective, 
+      a more advanced system could analyze timbre and more complex rhythm patterns to make 
+      educated guesses about genre (e.g., smooth, slow transitions for classical vs. sharp, 
+      geometric patterns for electronic). This would involve tracking patterns over a longer time window.
+    - **Introduce New Visual Motifs:** Add new GLSL functions for different visual textures 
+      (e.g., geometric patterns, particle systems) that can be blended in based on the 
+      detected musical archetype. The `uArchetype` uniform (a potential future addition) could 
+      control the mix between these different visual styles.
+    - **User Customization:** Allow users to have some control over the color palettes, 
+      visual intensity, or preferred visual motifs.
+    =====================================================================
+    -->
 </body>
 </html>
