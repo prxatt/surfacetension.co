@@ -1,19 +1,30 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { InstagramIcon, TwitterIcon, TikTokIcon, FacebookIcon } from '@/components/ui/SocialIcons';
+import { InstagramIcon, TwitterIcon, TikTokIcon } from '@/components/ui/SocialIcons';
 
 export default function QRPage() {
-  const progressRef = useRef<HTMLDivElement>(null);
+  const [clickedPlatforms, setClickedPlatforms] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    // Simulate progress fill
-    const fill = progressRef.current;
-    if (fill) {
-      fill.style.width = '60%';
-    }
-  }, []);
+  const platforms = [
+    { id: 'instagram', label: 'Instagram', href: 'https://www.instagram.com/surfacetension.co', icon: InstagramIcon, description: 'Behind the scenes content' },
+    { id: 'tiktok', label: 'TikTok', href: 'https://www.tiktok.com/@surfacetension.co', icon: TikTokIcon, description: 'Short-form content' },
+    { id: 'twitter', label: 'X (Twitter)', href: 'https://x.com/surfacetensi_o', icon: TwitterIcon, description: 'Updates & announcements' },
+    { id: 'youtube', label: 'YouTube', href: 'https://www.youtube.com/@DigitalDripRadio', icon: null, description: 'Long-form content' },
+    { id: 'website', label: 'Website', href: 'https://surfacetension.co', icon: null, description: 'Explore our work' },
+  ];
+
+  // Calculate progress as derived value
+  const progressPercent = (clickedPlatforms.size / platforms.length) * 100;
+
+  const handlePlatformClick = (id: string) => {
+    setClickedPlatforms((prev) => {
+      const newSet = new Set(prev);
+      newSet.add(id);
+      return newSet;
+    });
+  };
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -85,58 +96,34 @@ export default function QRPage() {
           </div>
           <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
             <motion.div
-              ref={progressRef}
               className="h-full bg-accent rounded-full"
               initial={{ width: '0%' }}
-              animate={{ width: '60%' }}
-              transition={{ duration: 1.5, delay: 1 }}
+              animate={{ width: `${progressPercent}%` }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
             />
           </div>
-          <div className="mt-3 font-sans text-xs text-white/40 font-light">3 of 5 platforms followed</div>
+          <div className="mt-3 font-sans text-xs text-white/40 font-light">
+            {clickedPlatforms.size} of {platforms.length} platforms followed
+          </div>
         </section>
 
         {/* Social Links with SVG Icons */}
         <section className="grid gap-4 md:grid-cols-2 max-w-2xl mx-auto mb-20 lg:mb-32">
-          {[
-            {
-              label: 'Instagram',
-              href: 'https://www.instagram.com/surfacetension.co',
-              icon: InstagramIcon,
-              description: 'Behind the scenes content',
-            },
-            {
-              label: 'TikTok',
-              href: 'https://www.tiktok.com/@surfacetension.co',
-              icon: TikTokIcon,
-              description: 'Short-form content',
-            },
-            {
-              label: 'X (Twitter)',
-              href: 'https://x.com/surfacetensi_o',
-              icon: TwitterIcon,
-              description: 'Updates & announcements',
-            },
-            {
-              label: 'YouTube',
-              href: 'https://www.youtube.com/@DigitalDripRadio',
-              icon: null,
-              description: 'Long-form content',
-            },
-            {
-              label: 'Website',
-              href: 'https://surfacetension.co',
-              icon: null,
-              description: 'Explore our work',
-            },
-          ].map((item, index) => {
+          {platforms.map((item, index) => {
             const Icon = item.icon;
+            const isClicked = clickedPlatforms.has(item.id);
             return (
               <motion.a
-                key={item.label}
+                key={item.id}
                 href={item.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between p-6 lg:p-8 border border-white/15 bg-white/5 hover:bg-white/10 hover:border-accent transition-all rounded-lg group"
+                onClick={() => handlePlatformClick(item.id)}
+                className={`flex items-center justify-between p-6 lg:p-8 border rounded-lg group transition-all ${
+                  isClicked
+                    ? 'border-accent bg-white/10'
+                    : 'border-white/15 bg-white/5 hover:bg-white/10 hover:border-accent'
+                }`}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 1.2 + index * 0.1 }}

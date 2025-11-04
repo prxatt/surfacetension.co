@@ -2,8 +2,23 @@
 
 import config from '@/content/carousel.json';
 
+interface Slide {
+  type: 'video' | 'image';
+  src: string;
+  poster?: string;
+  muted?: boolean;
+  autoplay?: boolean;
+}
+
+interface CarouselConfig {
+  enabled: boolean;
+  title?: string;
+  slides?: Slide[];
+}
+
 export default function PrivateCarouselPage() {
-  const enabled = (config as any).enabled === true;
+  const typedConfig = config as CarouselConfig;
+  const enabled = typedConfig.enabled === true;
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="container-custom py-16">
@@ -13,22 +28,22 @@ export default function PrivateCarouselPage() {
         )}
         {enabled && (
           <div className="mt-10 space-y-6">
-            {(config as any).slides?.map((s: any, i: number) => (
+            {typedConfig.slides?.map((slide, i) => (
               <div key={i} className="border border-white/10 p-4">
-                {s.type === 'video' && (
+                {slide.type === 'video' && (
                   <video
-                    src={s.src}
-                    poster={s.poster}
+                    src={slide.src}
+                    poster={slide.poster}
                     controls
-                    muted={!!s.muted}
-                    autoPlay={!!s.autoplay}
+                    muted={!!slide.muted}
+                    autoPlay={!!slide.autoplay}
                     playsInline
                     className="w-full h-auto"
                   />
                 )}
-                {s.type === 'image' && (
+                {slide.type === 'image' && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={s.src} alt="slide" className="w-full h-auto" />
+                  <img src={slide.src} alt="slide" className="w-full h-auto" />
                 )}
               </div>
             ))}

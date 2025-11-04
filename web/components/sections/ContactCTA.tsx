@@ -15,13 +15,32 @@ import {
 } from '@/components/ui/FeatureIcons';
 import home from '@/content/home.json';
 
+interface SocialLink {
+  label: string;
+  href: string;
+}
+
+interface TitleAlign {
+  justify: string;
+  align: string;
+  offsetY: number;
+}
+
+interface HomeData {
+  title?: string;
+  subtitle?: string;
+  titleAlign?: TitleAlign;
+  connectLink?: string;
+  socials?: SocialLink[];
+}
+
 export function ContactCTA() {
   const sectionRef = useRef<HTMLElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
-  const homeData = home as any;
+  const homeData: HomeData = home;
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -347,7 +366,7 @@ export function ContactCTA() {
 
               {/* Social Icons */}
               <div className="flex gap-3">
-                {homeData.socials?.map((social: any) => {
+                {homeData.socials?.map((social) => {
                   const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
                     Instagram: InstagramIcon,
                     TikTok: TikTokIcon,

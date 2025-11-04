@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 // Lottie support - add when assets are available
 import ReactPlayer from 'react-player';
 import { MediaAsset, MediaLayerConfig } from '@/lib/media/types';
@@ -188,12 +189,13 @@ function ImageLayer({
 }) {
   return (
     <div className="relative w-full h-full">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <Image
         src={asset.src}
         alt={asset.alt || ''}
+        fill
+        priority={priority}
         className={cn(
-          'w-full h-full object-cover transition-all duration-700',
+          'object-cover transition-all duration-700',
           isHovered && 'scale-105 brightness-110'
         )}
       />
