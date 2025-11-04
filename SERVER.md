@@ -45,4 +45,3 @@ lsof -i :4000 | grep LISTEN | awk '{print $2}' | xargs kill
 
 ✅ Server is running on port 4000
 ✅ Site is accessible at http://localhost:4000/index.html
-

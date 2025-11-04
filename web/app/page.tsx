@@ -6,8 +6,20 @@ import { Logo } from '@/components/ui/Logo';
 import { ContactCTA } from '@/components/sections/ContactCTA';
 import home from '@/content/home.json';
 
+interface HomeData {
+  title: string;
+  subtitle: string;
+  titleAlign: {
+    justify: 'center' | 'flex-start' | 'flex-end';
+    align: 'center' | 'left' | 'right';
+    offsetY: number;
+  };
+  connectLink: string;
+  socials: { label: string; href: string }[];
+}
+
 export default function HomePage() {
-  const homeData = home as any;
+  const homeData = home as HomeData;
 
   // Prevent scroll jump to ContactCTA
   useEffect(() => {

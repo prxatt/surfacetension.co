@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Logo } from '@/components/ui/Logo';
@@ -8,9 +8,7 @@ import ContactBackground from '@/components/quantum/ContactBackground';
 import { InstagramIcon, TwitterIcon, TikTokIcon, YouTubeIcon } from '@/components/ui/SocialIcons';
 
 export default function ContactPage() {
-  const progressRef = useRef<HTMLDivElement>(null);
   const [clickedPlatforms, setClickedPlatforms] = useState<Set<string>>(new Set());
-  const [progress, setProgress] = useState(0);
 
   const platforms = [
     { id: 'instagram', label: 'Instagram', href: 'https://www.instagram.com/surfacetension.co', icon: InstagramIcon },
@@ -19,15 +17,8 @@ export default function ContactPage() {
     { id: 'youtube', label: 'YouTube', href: 'https://www.youtube.com/@DigitalDripRadio', icon: YouTubeIcon },
   ];
 
-  useEffect(() => {
-    // Calculate progress
-    const progressPercent = (clickedPlatforms.size / platforms.length) * 100;
-    setProgress(progressPercent);
-    
-    if (progressRef.current) {
-      progressRef.current.style.width = `${progressPercent}%`;
-    }
-  }, [clickedPlatforms]);
+  // Calculate progress as derived value
+  const progressPercent = (clickedPlatforms.size / platforms.length) * 100;
 
   const handlePlatformClick = (id: string) => {
     setClickedPlatforms((prev) => {
@@ -118,10 +109,9 @@ export default function ContactPage() {
           <div className="relative w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/10">
             {/* Glow effect matching background colors */}
             <motion.div
-              ref={progressRef}
               className="h-full rounded-full relative overflow-hidden"
               initial={{ width: '0%' }}
-              animate={{ width: `${progress}%` }}
+              animate={{ width: `${progressPercent}%` }}
               transition={{ duration: 0.8, ease: 'easeOut' }}
             >
               {/* Gradient matching background particle colors */}
