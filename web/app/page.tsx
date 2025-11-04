@@ -10,7 +10,7 @@ interface HomeData {
   title: string;
   subtitle: string;
   titleAlign: {
-    justify: 'center' | 'flex-start' | 'flex-end';
+    justify: string;
     align: 'center' | 'left' | 'right';
     offsetY: number;
   };
@@ -19,7 +19,7 @@ interface HomeData {
 }
 
 export default function HomePage() {
-  const homeData = home as HomeData;
+  const homeData: HomeData = home;
 
   // Prevent scroll jump to ContactCTA
   useEffect(() => {
