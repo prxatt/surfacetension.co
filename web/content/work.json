@@ -1,0 +1,19 @@
+{
+  "projects": [
+    {
+      "slug": "immersive-installation",
+      "title": "Immersive Installation",
+      "media": [
+        { "asset": { "id": "p1", "type": "image", "src": "/work/project-1.jpg", "alt": "Project 1" } }
+      ]
+    },
+    {
+      "slug": "coffee-rave-series",
+      "title": "Coffee Rave Series",
+      "media": [
+        { "asset": { "id": "p2", "type": "video", "src": "/work/project-2.mp4", "poster": "/work/project-2.jpg" } }
+      ]
+    }
+  ]
+}
+

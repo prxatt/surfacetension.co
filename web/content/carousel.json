@@ -1,0 +1,14 @@
+{
+  "enabled": false,
+  "title": "Private Carousel",
+  "slides": [
+    {
+      "type": "video",
+      "src": "/videos/placeholder.mp4",
+      "poster": "/videos/placeholder.jpg",
+      "muted": true,
+      "autoplay": false
+    }
+  ]
+}
+
