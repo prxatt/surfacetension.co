@@ -1,0 +1,16 @@
+{
+  "title": "SURFACE TENSION",
+  "subtitle": "Where dimensions connect",
+  "titleAlign": {
+    "justify": "center",
+    "align": "center",
+    "offsetY": 0
+  },
+  "connectLink": "/contact",
+  "socials": [
+    { "label": "Instagram", "href": "https://www.instagram.com/surfacetension.co" },
+    { "label": "TikTok", "href": "https://www.tiktok.com/@surfacetension.co" },
+    { "label": "X", "href": "https://x.com/surfacetensi_o" }
+  ]
+}
+

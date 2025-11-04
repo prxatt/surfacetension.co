@@ -1,8 +1,6 @@
 {
   "rewrites": [
-    {
-      "source": "/qr",
-      "destination": "/qr.html"
-    }
+    { "source": "/qr", "destination": "/qr" },
+    { "source": "/contact", "destination": "/contact" }
   ]
 }
