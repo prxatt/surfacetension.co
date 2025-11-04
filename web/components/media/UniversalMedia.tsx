@@ -257,7 +257,6 @@ function LottieLayer({ asset, play }: { asset: MediaAsset; play: boolean }) {
 function Model3DLayer({ asset }: { asset: MediaAsset }) {
   return (
     <div className="relative w-full h-full">
-      {/* @ts-ignore - model-viewer is a custom element */}
       <model-viewer
         src={asset.src}
         alt={asset.alt}
