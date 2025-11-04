@@ -22,7 +22,7 @@ Example:
 
 ### Option 2: Manual Python server
 ```bash
-cd /Users/prattmajmudar/Desktop/surfacetension.co
+cd /path/to/surfacetension.co
 python3 -m http.server 4000 --bind 127.0.0.1
 ```
 
