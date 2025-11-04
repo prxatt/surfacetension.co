@@ -750,11 +750,11 @@
             window.addEventListener('touchend', () => { if (Date.now() - touchStartTime > 500) showUi(); });
 
         } catch (error) {
+            // Log full error details to console for debugging
             console.error("A fatal error occurred during page initialization:", error);
+            // Display generic error message to user without exposing sensitive details
             const errorContainer = document.getElementById('vfx-canvas-container') || document.body;
-            const errorMessage = error?.message || 'Unknown error';
-            const errorStack = error?.stack ? error.stack.substring(0, 500) : '';
-            errorContainer.innerHTML = `<div style="padding: 2em; text-align: center; color: white; font-family: monospace; z-index: 1000; position: relative;"><h2 style="color: #ff6b6b;">An Error Occurred</h2><p style="margin-top: 1em;">The animation could not be started. Please check the browser console for details.</p><pre style="text-align: left; display: inline-block; margin-top: 1.5em; padding: 1em; background: rgba(0,0,0,0.3); border: 1px solid #555; border-radius: 5px; max-width: 90%; overflow-wrap: break-word; white-space: pre-wrap;">${errorStack || errorMessage}</pre></div>`;
+            errorContainer.innerHTML = `<div style="padding: 2em; text-align: center; color: white; font-family: monospace; z-index: 1000; position: relative;"><h2 style="color: #ff6b6b;">An Error Occurred</h2><p style="margin-top: 1em;">The animation could not be started. Please check the browser console for details.</p><p style="margin-top: 1.5em; opacity: 0.8; font-size: 0.9em;">If the problem persists, please try refreshing the page or contact support.</p></div>`;
             const uiContainer = document.getElementById('ui-container');
             if (uiContainer) {
                 uiContainer.style.display = 'none';

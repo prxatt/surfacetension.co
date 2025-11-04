@@ -1,6 +1,9 @@
 export const metadata = {
   title: 'Surface Tension',
   description: 'Where dimensions connect',
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 import './globals.css';

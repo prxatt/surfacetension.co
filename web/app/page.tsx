@@ -19,7 +19,7 @@ interface HomeData {
 }
 
 export default function HomePage() {
-  const homeData: HomeData = home;
+  const homeData: HomeData = home as HomeData;
 
   // Prevent scroll jump to ContactCTA
   useEffect(() => {

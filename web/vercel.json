@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/qr", "destination": "/qr" },
+    { "source": "/contact", "destination": "/contact" }
+  ]
+}
+

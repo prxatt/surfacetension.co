@@ -1,6 +1,6 @@
 {
-  "rewrites": [
-    { "source": "/qr", "destination": "/qr" },
-    { "source": "/contact", "destination": "/contact" }
-  ]
+  "buildCommand": "cd web && npm install && npm run build",
+  "outputDirectory": "web/.next",
+  "installCommand": "cd web && npm install",
+  "framework": "nextjs"
 }
