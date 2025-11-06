@@ -49,7 +49,7 @@ export default function HomePage() {
             {/* Brand name ONLY in Ivy Presto */}
             <h1 className="font-display text-display tracking-tight">{homeData.title}</h1>
             {homeData.subtitle && (
-              <p className="mt-6 text-lg uppercase tracking-[0.2em] text-white/60 font-sans font-light">
+              <p className="mt-6 uppercase tracking-[0.2em] text-white/60 font-sans font-light w-fit max-w-[80vw] mx-auto text-[clamp(0.75rem,1.5vw,1rem)]">
                 {homeData.subtitle}
               </p>
             )}
