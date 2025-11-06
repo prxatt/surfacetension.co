@@ -55,12 +55,17 @@ export default function CinematicBackground() {
       uTime: { value: 0 },
       uResolution: { value: new THREE.Vector2(container.clientWidth, container.clientHeight) },
       uNoiseSeed: { value: Math.random() * 1000 },
-      uColor1: { value: new THREE.Color().setHSL(0.6, 0.7, 0.1) },
-      uColor2: { value: new THREE.Color().setHSL(0.75, 0.8, 0.45) },
-      uColor3: { value: new THREE.Color().setHSL(0.2, 0.9, 0.65) },
-      uColor4: { value: new THREE.Color().setHSL(0.1, 0.6, 0.1) },
-      uColor5: { value: new THREE.Color().setHSL(0.2, 0.7, 0.5) },
-      uColor6: { value: new THREE.Color().setHSL(0.6, 0.8, 0.7) },
+      // Existing 6 colors: deep dark red, vanta black, saffron, green, royal dark blue
+      uColor1: { value: new THREE.Color(0x000000) },   // Vanta Black
+      uColor2: { value: new THREE.Color(0x002366) },   // Royal Dark Blue
+      uColor3: { value: new THREE.Color(0xFFB800) },   // Saffron
+      uColor4: { value: new THREE.Color(0x001a0f) },   // Dark Green
+      uColor5: { value: new THREE.Color(0x8B0000) },   // Deep Dark Red
+      uColor6: { value: new THREE.Color(0xE5E5E5) },   // Platinum - replaces saffron variation
+      // NEW: 3 additional colors added seamlessly
+      uColor7: { value: new THREE.Color(0xB76E79) },   // Rose Gold
+      uColor8: { value: new THREE.Color(0x856798) },   // Lavender Purple
+      uColor9: { value: new THREE.Color(0x006400) },   // Dark Green (additional)
     } as const;
 
     const material = new THREE.ShaderMaterial({
@@ -71,35 +76,65 @@ export default function CinematicBackground() {
         ${simplex}
         varying vec2 vUv;
         uniform float uTime; uniform float uNoiseSeed;
-        uniform vec3 uColor1, uColor2, uColor3, uColor4, uColor5, uColor6;
-        vec3 palette(float n, vec3 a, vec3 b, vec3 c){
-          vec3 color = mix(a, b, smoothstep(-0.2, 0.2, n));
-          color = mix(color, c, smoothstep(0.2, 0.4, n));
-          return color;
+        uniform vec3 uColor1, uColor2, uColor3, uColor4, uColor5, uColor6, uColor7, uColor8, uColor9;
+        // Palette function for 5 colors - wider bell curves for better visibility and smoother flow
+        vec3 palette5(float n, vec3 a, vec3 b, vec3 c, vec3 d, vec3 e){
+          float t = n * 0.5 + 0.5;
+          // Wider, more overlapping bell curves for smoother organic flow
+          float w1 = smoothstep(0.0, 0.3, t) * smoothstep(0.6, 0.3, t); // Color a - wider range
+          float w2 = smoothstep(0.1, 0.4, t) * smoothstep(0.7, 0.4, t); // Color b - wider range
+          float w3 = smoothstep(0.25, 0.55, t) * smoothstep(0.8, 0.55, t); // Color c - wider range
+          float w4 = smoothstep(0.4, 0.7, t) * smoothstep(0.9, 0.7, t); // Color d - wider range
+          float w5 = smoothstep(0.55, 0.85, t) * smoothstep(1.0, 0.85, t); // Color e - wider range
+          // Wrap around for seamless transition
+          w1 += smoothstep(0.85, 1.0, t) * 0.6; // Stronger wrap for continuity
+          // Normalize weights
+          float totalWeight = w1 + w2 + w3 + w4 + w5 + 0.001;
+          w1 /= totalWeight; w2 /= totalWeight; w3 /= totalWeight; w4 /= totalWeight; w5 /= totalWeight;
+          return a * w1 + b * w2 + c * w3 + d * w4 + e * w5;
+        }
+        // Palette function for 4 colors - wider bell curves for better visibility and smoother flow
+        vec3 palette4(float n, vec3 a, vec3 b, vec3 c, vec3 d){
+          float t = n * 0.5 + 0.5;
+          // Wider, more overlapping bell curves for smoother organic flow
+          float w1 = smoothstep(0.0, 0.35, t) * smoothstep(0.65, 0.35, t); // Color a - wider range
+          float w2 = smoothstep(0.15, 0.5, t) * smoothstep(0.8, 0.5, t); // Color b - wider range
+          float w3 = smoothstep(0.35, 0.7, t) * smoothstep(0.95, 0.7, t); // Color c - wider range
+          float w4 = smoothstep(0.55, 0.9, t) * smoothstep(1.0, 0.9, t); // Color d - wider range
+          // Wrap around for seamless transition
+          w1 += smoothstep(0.9, 1.0, t) * 0.6; // Stronger wrap for continuity
+          // Normalize weights
+          float totalWeight = w1 + w2 + w3 + w4 + 0.001;
+          w1 /= totalWeight; w2 /= totalWeight; w3 /= totalWeight; w4 /= totalWeight;
+          return a * w1 + b * w2 + c * w3 + d * w4;
         }
         void main(){
           vec2 base = vUv - 0.5;
-          base *= (1.0 - sin(uTime * 0.02) * 0.05);
-          base += vec2(uTime * 0.01, uTime * 0.005);
+          base *= (1.0 - sin(uTime * 0.015) * 0.04); // Smoother, slower breathing
+          base += vec2(uTime * 0.008, uTime * 0.004); // Slower drift for organic flow
 
-          float tA = uTime * 0.1;
+          float tA = uTime * 0.08; // Slower for smoother organic flow
           float nA1 = snoise(vec3(base * 1.2 + uNoiseSeed, tA));
           float nA2 = snoise(vec3(base * 2.5 + nA1 * 0.2, tA));
-          vec3 colA = palette(nA2, uColor1, uColor2, uColor3);
+          // Palette A: 5 colors (vanta black, navy, rose gold, lavender purple, platinum)
+          // All colors evenly distributed - no saffron here
+          vec3 colA = palette5(nA2, uColor1, uColor2, uColor7, uColor8, uColor6);
 
-          float tB = uTime * 0.08;
+          float tB = uTime * 0.06; // Slower for smoother organic flow
           float nB1 = snoise(vec3(base * 1.0 + uNoiseSeed + 10.0, tB));
           float nB2 = snoise(vec3(base * 3.5 + nB1 * 0.3, tB));
-          vec3 colB = palette(nB2, uColor4, uColor5, uColor6);
+          // Palette B: 4 colors (dark green, dark red, saffron, dark green additional)
+          // Saffron appears only once here, ensuring equal treatment
+          vec3 colB = palette4(nB2, uColor4, uColor5, uColor3, uColor9);
 
-          float mask = snoise(vec3(base * 0.6 + uNoiseSeed - 20.0, uTime * 0.06));
-          float mixThreshold = 0.1; float mixSharp = 0.2;
+          float mask = snoise(vec3(base * 0.6 + uNoiseSeed - 20.0, uTime * 0.05)); // Slower mask animation
+          float mixThreshold = 0.1; float mixSharp = 0.25; // Wider blend zone for smoother transitions
           float mixF = smoothstep(mixThreshold, mixThreshold + mixSharp, mask);
 
           vec3 finalColor = mix(colA, colB, mixF);
           float vignette = 1.0 - pow(length(vUv - 0.5) * 1.2, 2.0);
           finalColor *= vignette * 0.9;
-          finalColor += (snoise(vec3(vUv * 800.0, uTime * 2.0)) * 0.5 + 0.5) * 0.01;
+          finalColor += (snoise(vec3(vUv * 800.0, uTime * 1.5)) * 0.5 + 0.5) * 0.008; // Slower, subtler grain
           gl_FragColor = vec4(finalColor, 1.0);
         }
       `,
@@ -146,4 +181,3 @@ export default function CinematicBackground() {
 
   return <div ref={containerRef} className="absolute inset-0" aria-hidden />;
 }
-
